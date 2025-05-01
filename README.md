@@ -15,5 +15,5 @@ To add new pipelines, create the following two files
 ## Run a pipeline
 To run a pipeline, use the command
 ```bash
-python src/main.py --config config/<config_file>
+python src/main.py --config config/<config_file>.yaml
 ```
