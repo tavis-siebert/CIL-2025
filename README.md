@@ -7,6 +7,16 @@ pip install pre-commit
 pre-commit install
 ```
 
+## Save embeddings
+To extract and save embeddings using [`SentenceTransformer`](https://huggingface.co/models?library=sentence-transformers) models, run
+```bash
+python scripts/save_embeddings.py --out /work/courses/pmlr/17/embeddings --model <model_name>
+```
+To load the embeddings, use
+```python
+TBD
+```
+
 ## Add a pipeline
 To add new pipelines, create the following two files
 * `config/<config_file>.yaml`: The configuration file with the module name of the pipeline and all hyperparameters.

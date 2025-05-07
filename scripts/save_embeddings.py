@@ -5,6 +5,7 @@ sys.path.append(str((Path(__file__).parent / ".." / "src").absolute()))
 
 import argparse
 import logging
+import os
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +18,9 @@ logger = logging.getLogger(__name__)
 
 def main(args):
     path = Path(args.out) / args.model / "embeddings.npz"
+    if path.is_file():
+        raise ValueError(f"The embeddings already exist. Please delete the file to proceed: {path}")
+    os.makedirs(path.parent, exist_ok=True)
 
     # load datasets
     train_dataset = load_data(Path(args.data) / "training.csv")
@@ -36,7 +40,7 @@ def main(args):
         train_embeddings=train_embeddings,
         test_embeddings=test_embeddings,
     )
-    logger.info(f"Saved embeddings to: {path}")
+    logger.info(f"Saved embeddings: {path}")
 
 
 if __name__ == "__main__":
@@ -56,8 +60,15 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--out",
+        type=Path,
         default="output/embeddings",
         help="The path to the embeddings folder. (default: output/embeddings)",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=64,
+        help="The batch size used to compute the embeddings. (default: 64)",
     )
     args = parser.parse_args()
 

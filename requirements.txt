@@ -5,6 +5,7 @@ omegaconf
 
 scikit-learn
 sentence-transformers
+huggingface_hub[hf_transfer,hf_xet] # for faster downloads
 
 ipykernel
 ipywidgets
