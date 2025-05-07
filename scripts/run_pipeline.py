@@ -1,3 +1,8 @@
+import sys
+from pathlib import Path
+
+sys.path.append(str((Path(__file__).parent / ".." / "src").absolute()))
+
 import argparse
 import logging
 from pathlib import Path
