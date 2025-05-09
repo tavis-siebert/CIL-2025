@@ -15,6 +15,7 @@ from utils import (
     LABEL_MAPPING_REG,
     evaluate_score,
     get_config,
+    get_device,
     load_data,
     save_predictions,
     setup_logging,
@@ -29,8 +30,11 @@ def main(args):
     # load config file
     config = get_config(args.config)
 
+    # find device
+    device = get_device(args.device, verbose=False)
+
     # load pipeline
-    pipeline = load_pipeline(config.pipeline)
+    pipeline = load_pipeline(config.pipeline, device=device)
     logger.info(f"Loaded pipeline '{config.pipeline.name}'.")
 
     if config.label_mapping == "regression":
@@ -96,6 +100,11 @@ if __name__ == "__main__":
         "--out",
         default="output/submissions/submission.csv",
         help="The path to the submission file. (default: output/submissions/submission.csv)",
+    )
+    parser.add_argument(
+        "--device",
+        default="auto",
+        help="The device on which to compute. (default: auto)",
     )
     args = parser.parse_args()
 

@@ -8,7 +8,7 @@ from .base import BasePipeline
 class BaselineBowLogreg(BasePipeline):
     """Bag-of-words and logistic regression baseline taken from the provided notebook."""
 
-    def __init__(self, config):
+    def __init__(self, config, device=None):
         self.config = config
 
         config_bow = OmegaConf.to_container(config.bow)
