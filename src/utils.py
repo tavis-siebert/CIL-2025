@@ -75,8 +75,8 @@ def evaluate_score(labels, predictions):
     return 0.5 * (2 - mean_absolute_error(labels, predictions))
 
 
-def save_predictions(path, test_ids, test_predictions, label_mapping):
-    submission = pd.DataFrame({"id": test_ids, "label": test_predictions})
+def save_predictions(path, ids, predictions, label_mapping):
+    submission = pd.DataFrame({"id": ids, "label": predictions})
 
     # revert label mapping
     label_mapping_rev = {value: key for key, value in label_mapping.items()}
