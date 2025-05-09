@@ -11,10 +11,10 @@ class BasePipeline():
         self.config = config
         self.device = device
 
-    def train(self, train_sentences: pd.Series, train_labels: pd.Series, val_sentences: pd.Series, val_labels: pd.Series) -> np.ndarray:
-        """Train the model and return predictions for the training set."""
-        raise NotImplementedError("train() not implemented")
+    def train(self, train_sentences: pd.Series, train_labels: pd.Series, val_sentences: pd.Series, val_labels: pd.Series) -> tuple[np.ndarray, np.ndarray]:
+        """Train the model and make predictions for the training and validation set."""
+        raise NotImplementedError()
 
     def predict(self, sentences: pd.Series) -> np.ndarray:
         """Make predictions for the given sentences."""
-        raise NotImplementedError("predict() not implemented")
+        raise NotImplementedError()

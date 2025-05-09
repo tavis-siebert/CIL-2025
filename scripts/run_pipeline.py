@@ -44,8 +44,6 @@ def main(args):
     else:
         raise ValueError(f"Unknown label mapping: {config.label_mapping}")
 
-    logger.info("### TRAIN ###")
-
     # load train dataset and create splits
     train_dataset = load_data(Path(args.data) / "training.csv", label_mapping=label_mapping)
     train_sentences, val_sentences, train_labels, val_labels = train_test_split(
@@ -56,18 +54,12 @@ def main(args):
         random_state=config.seed,
     )
 
-    # train the model
-    train_predictions = pipeline.train(train_sentences, train_labels, val_sentences, val_labels)
+    # train and evaluate the model
+    train_predictions, val_predictions = pipeline.train(train_sentences, train_labels, val_sentences, val_labels)
     score_train = evaluate_score(train_labels, train_predictions)
-    logger.info(f"Score (training set): {score_train:.05f}")
-
-    # evaluate model
-    val_predictions = pipeline.predict(val_sentences)
     score_val = evaluate_score(val_labels, val_predictions)
+    logger.info(f"Score (training set): {score_train:.05f}")
     logger.info(f"Score (validation set): {score_val:.05f}")
-
-
-    logger.info("### TEST ###")
 
     # load test dataset
     test_dataset = load_data(Path(args.data) / "test.csv")

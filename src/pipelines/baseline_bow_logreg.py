@@ -25,7 +25,11 @@ class BaselineBowLogreg(BasePipeline):
 
         # make predictions for training data
         train_predictions = self.model.predict(train_embeddings)
-        return train_predictions
+
+        # make predictions for validation data
+        val_predictions = self.predict(val_sentences)
+
+        return train_predictions, val_predictions
 
     def predict(self, sentences):
         embeddings = self.vectorizer.transform(sentences)
