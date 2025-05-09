@@ -2,8 +2,10 @@ from omegaconf import OmegaConf
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegression
 
+from .base import BasePipeline
 
-class BaselineBowLogreg():
+
+class BaselineBowLogreg(BasePipeline):
     """Bag-of-words and logistic regression baseline taken from the provided notebook."""
 
     def __init__(self, config):
