@@ -1,0 +1,16 @@
+seed: 0
+label_mapping: regression # options: regression, classification
+val_split_size: 0.15
+requires_embeddings: true
+encoder: sentence-transformers/all-mpnet-base-v2
+
+pipeline:
+  name: boosted_mlp.BoostedMLP
+
+  n_learners: 10
+  hidden_sizes: [256, 128]
+  mode: regression
+  num_epochs: 45
+  boost_rate: 0.1
+  dropout_p: 0.3
+  batch_size: 64
