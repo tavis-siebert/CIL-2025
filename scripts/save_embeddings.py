@@ -5,7 +5,6 @@ sys.path.append(str((Path(__file__).parent / ".." / "src").absolute()))
 
 import argparse
 import logging
-import os
 from pathlib import Path
 
 import numpy as np
@@ -15,16 +14,20 @@ from sentence_transformers import SentenceTransformer
 from tqdm.auto import tqdm
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
+from cache import CACHE, get_embeddings_folder, save_embeddings
 from utils import get_device, load_data, setup_logging
 
 logger = logging.getLogger(__name__)
 
 
 def main(args):
-    path = Path(args.out) / args.pipeline / args.model.replace("/", "__")
-    if path.is_dir():
-        raise ValueError(f"The embeddings already exist. Please delete the folder to proceed: {path}")
+    # initialize cache
+    CACHE.init(cache_dir=args.cache)
+    embeddings_folder = get_embeddings_folder(args.pipeline, args.model)
+    if CACHE.get_path(embeddings_folder).is_dir():
+        raise FileExistsError(f"The embeddings already exist in the cache. Please delete the folder: {embeddings_folder}")
 
+    # get device handler
     device = get_device(args.device, verbose=False)
 
     # load datasets
@@ -41,15 +44,12 @@ def main(args):
         train_embeddings = model.encode(train_dataset["sentence"], show_progress_bar=True, batch_size=args.batch_size)
         test_embeddings = model.encode(test_dataset["sentence"], show_progress_bar=True, batch_size=args.batch_size)
 
-        os.makedirs(path, exist_ok=True)
         # save embeddings
-        path_embeddings = path / "embeddings.npz"
-        np.savez_compressed(
-            path_embeddings,
-            train_embeddings=train_embeddings,
-            test_embeddings=test_embeddings,
-        )
-        logger.info(f"Saved embeddings: {path_embeddings}")
+        embeddings = {
+            "train_embeddings": train_embeddings,
+            "test_embeddings": test_embeddings,
+        }
+        save_embeddings(embeddings, args.pipeline, args.model)
     elif args.pipeline == "huggingface":
         # load pipeline
         tokenizer = AutoTokenizer.from_pretrained(args.model)
@@ -111,23 +111,16 @@ def main(args):
         train_embeddings, train_predictions = encode(train_dataset["sentence"], args.batch_size)
         test_embeddings, test_predictions = encode(test_dataset["sentence"], args.batch_size)
 
-        os.makedirs(path, exist_ok=True)
         # save embeddings
         for mode in ["cls", "mean", "max"]:
-            path_embeddings = path / f"embeddings_{mode}.npz"
-            np.savez_compressed(
-                str(path_embeddings).format(f"_{mode}"),
-                train_embeddings=train_embeddings[mode],
-                test_embeddings=test_embeddings[mode],
-            )
-            logger.info(f"Saved embeddings: {path_embeddings}")
-        # save predictions
-        path_predictions_train = path / "predictions_train.csv"
-        path_predictions_test = path / "predictions_test.csv"
-        train_predictions.to_csv(path_predictions_train)
-        test_predictions.to_csv(path_predictions_test)
-        logger.info(f"Saved predictions (train): {path_predictions_train}")
-        logger.info(f"Saved predictions (test): {path_predictions_test}")
+            embeddings = {
+                "train_embeddings": train_embeddings[mode],
+                "test_embeddings": test_embeddings[mode],
+            }
+            save_embeddings(embeddings, args.pipeline, args.model, f"embeddings_{mode}.npz")
+        # save predictions to the embeddings cache
+        save_embeddings(train_predictions, args.pipeline, args.model, "predictions_train.csv")
+        save_embeddings(test_predictions, args.pipeline, args.model, "predictions_test.csv")
     else:
         raise ValueError(f"Unknown pipeline: {args.pipeline}")
 
@@ -153,10 +146,10 @@ if __name__ == "__main__":
         help="The path to the folder containing 'training.csv' and 'test.csv'. (default: data)",
     )
     parser.add_argument(
-        "--out",
+        "--cache",
         type=Path,
-        default="output/embeddings",
-        help="The path to the embeddings folder. (default: output/embeddings)",
+        default="output/cache",
+        help="The path to the cache folder. (default: output/cache)",
     )
     parser.add_argument(
         "--device",

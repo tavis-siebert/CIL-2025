@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 
 from pipelines import load_pipeline
 from utils import (
+    CACHE,
     LABEL_MAPPING_CLA,
     LABEL_MAPPING_REG,
     evaluate_score,
@@ -25,12 +26,13 @@ logger = logging.getLogger(__name__)
 
 
 def main(args):
-    logger.info("### SETUP ###")
+    # initialize cache
+    CACHE.init(cache_dir=args.cache)
 
     # load config file
     config = get_config(args.config)
 
-    # find device
+    # get device handler
     device = get_device(args.device, verbose=False)
 
     # load pipeline
@@ -87,6 +89,12 @@ if __name__ == "__main__":
         "--data",
         default="data",
         help="The path to the folder containing 'training.csv' and 'test.csv'. (default: data)",
+    )
+    parser.add_argument(
+        "--cache",
+        type=Path,
+        default="output/cache",
+        help="The path to the cache folder. (default: output/cache)",
     )
     parser.add_argument(
         "--out",
