@@ -4,8 +4,11 @@ matplotlib
 omegaconf
 
 scikit-learn
-sentence-transformers
+transformers
+accelerate
 huggingface_hub[hf_transfer,hf_xet] # for faster downloads
+sentence-transformers
 
 ipykernel
 ipywidgets
+tqdm

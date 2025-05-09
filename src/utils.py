@@ -3,6 +3,7 @@ import os
 import sys
 
 import pandas as pd
+import torch
 from omegaconf import OmegaConf
 from sklearn.metrics import mean_absolute_error
 
@@ -41,6 +42,23 @@ def get_config(config_path, overwrite={}, verbose=True):
     config.merge_with_dotlist(overwrite)
 
     return config
+
+
+def get_device(device="auto", verbose=True):
+    # create the device handler
+    if device == "auto":
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+    device = torch.device(device)
+
+    if verbose:
+        logger.info(f"Using device: {device}")
+
+    return device
 
 
 def load_data(path, label_mapping=None):

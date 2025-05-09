@@ -15,7 +15,7 @@ from sentence_transformers import SentenceTransformer
 from tqdm.auto import tqdm
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-from utils import load_data, setup_logging
+from utils import get_device, load_data, setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -25,19 +25,23 @@ def main(args):
     if path.is_dir():
         raise ValueError(f"The embeddings already exist. Please delete the folder to proceed: {path}")
 
+    device = get_device(args.device, verbose=False)
+
     # load datasets
     train_dataset = load_data(Path(args.data) / "training.csv")
     test_dataset = load_data(Path(args.data) / "test.csv")
 
     if args.pipeline == "sentencetransformer":
         # load pipeline
-        model = SentenceTransformer(args.model)
+        model = SentenceTransformer(args.model, device=device)
         logger.info(f"Loaded SentenceTransformer pipeline with model: {args.model}")
+        logger.info(f"Using device: {model.device}")
 
         # generate embeddings
         train_embeddings = model.encode(train_dataset["sentence"], show_progress_bar=True, batch_size=args.batch_size)
         test_embeddings = model.encode(test_dataset["sentence"], show_progress_bar=True, batch_size=args.batch_size)
 
+        os.makedirs(path, exist_ok=True)
         # save embeddings
         path_embeddings = path / "embeddings.npz"
         np.savez_compressed(
@@ -50,7 +54,9 @@ def main(args):
         # load pipeline
         tokenizer = AutoTokenizer.from_pretrained(args.model)
         model = AutoModelForSequenceClassification.from_pretrained(args.model)
+        model = model.to(device)
         logger.info(f"Loaded HuggingFace pipeline with model: {args.model}")
+        logger.info(f"Using device: {model.device}")
 
         # generate embeddings and predictions
         def encode(sentences, batch_size):
@@ -63,29 +69,40 @@ def main(args):
             )
 
             # generate embeddings and predictions
-            def postprocess_embeddings(embeddings, attention_mask):
+            def extract_embeddings(last_hidden_state, attention_mask):
+                # reference: https://github.com/UKPLab/sentence-transformers/blob/68a61ec8e8f0497e5cddc0bc59f92b82ef62b54d/sentence_transformers/models/Pooling.py#L135
+                input_mask_expanded = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
+                # extract CLS token embedding
+                embeddings_cls = last_hidden_state[:, 0]
                 # apply mean pooling
-                input_mask_expanded = attention_mask.unsqueeze(-1).expand(embeddings.size()).float()
-                embeddings = torch.sum(embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-                # normalize embeddings
-                embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=-1)
-                return embeddings
+                embeddings_mean = torch.sum(last_hidden_state * input_mask_expanded, dim=1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+                # apply max pooling
+                embeddings_max = torch.max(torch.where(input_mask_expanded == 0, -1e9, last_hidden_state), dim=1).values
+                return embeddings_cls, embeddings_mean, embeddings_max
 
-            embeddings_all = []
+            embeddings_all_cls = []
+            embeddings_all_mean = []
+            embeddings_all_max = []
             predictions_all = []
             for batch in tqdm(dataloader):
+                batch = batch.to(model.device)
                 with torch.no_grad():
                     outputs = model(**batch, output_hidden_states=True)
+                    last_hidden_state = outputs.hidden_states[-1].detach()
+                    logits = outputs.logits.detach()
                 # extract embeddings from last hidden state
-                embeddings = postprocess_embeddings(outputs.hidden_states[-1], batch["attention_mask"])
-                embeddings = embeddings.detach().cpu().numpy()
+                embeddings = extract_embeddings(last_hidden_state, batch["attention_mask"])
+                embeddings_all_cls.append(embeddings[0].cpu().numpy())
+                embeddings_all_mean.append(embeddings[1].cpu().numpy())
+                embeddings_all_max.append(embeddings[2].cpu().numpy())
                 # extract predictions from logits
-                predictions = torch.softmax(outputs.logits, dim=-1)
-                predictions = predictions.detach().cpu().numpy()
-                # append to lists
-                embeddings_all.append(embeddings)
-                predictions_all.append(predictions)
-            embeddings_all = np.concatenate(embeddings_all, axis=0)
+                predictions = torch.softmax(logits, dim=-1)
+                predictions_all.append(predictions.cpu().numpy())
+            embeddings_all = {
+                "cls": np.concatenate(embeddings_all_cls, axis=0),
+                "mean": np.concatenate(embeddings_all_mean, axis=0),
+                "max": np.concatenate(embeddings_all_max, axis=0),
+            }
             predictions_all = np.concatenate(predictions_all, axis=0)
             predictions_all = pd.DataFrame(predictions_all, index=sentences.index, columns=model.config.id2label.values())
 
@@ -94,19 +111,21 @@ def main(args):
         train_embeddings, train_predictions = encode(train_dataset["sentence"], args.batch_size)
         test_embeddings, test_predictions = encode(test_dataset["sentence"], args.batch_size)
 
-        # save embeddings and predictions
         os.makedirs(path, exist_ok=True)
-        path_embeddings = path / "embeddings.npz"
+        # save embeddings
+        for mode in ["cls", "mean", "max"]:
+            path_embeddings = path / f"embeddings_{mode}.npz"
+            np.savez_compressed(
+                str(path_embeddings).format(f"_{mode}"),
+                train_embeddings=train_embeddings[mode],
+                test_embeddings=test_embeddings[mode],
+            )
+            logger.info(f"Saved embeddings: {path_embeddings}")
+        # save predictions
         path_predictions_train = path / "predictions_train.csv"
         path_predictions_test = path / "predictions_test.csv"
-        np.savez_compressed(
-            path_embeddings,
-            train_embeddings=train_embeddings,
-            test_embeddings=test_embeddings,
-        )
         train_predictions.to_csv(path_predictions_train)
         test_predictions.to_csv(path_predictions_test)
-        logger.info(f"Saved embeddings: {path_embeddings}")
         logger.info(f"Saved predictions (train): {path_predictions_train}")
         logger.info(f"Saved predictions (test): {path_predictions_test}")
     else:
@@ -138,6 +157,11 @@ if __name__ == "__main__":
         type=Path,
         default="output/embeddings",
         help="The path to the embeddings folder. (default: output/embeddings)",
+    )
+    parser.add_argument(
+        "--device",
+        default="auto",
+        help="The device on which to compute. (default: auto)",
     )
     parser.add_argument(
         "--batch_size",

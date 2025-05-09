@@ -8,10 +8,16 @@ pre-commit install
 ```
 
 ## Save embeddings
-To extract and save embeddings using [`SentenceTransformer`](https://huggingface.co/models?library=sentence-transformers) models, run
+To extract and save embeddings from [`SentenceTransformer`](https://huggingface.co/models?library=sentence-transformers) models, run
 ```bash
-python scripts/save_embeddings.py --out /work/courses/pmlr/17/embeddings --model <model_name>
+python scripts/save_embeddings.py --out /work/courses/pmlr/17/embeddings --pipeline sentencetransformer --model <model_name>
 ```
+
+To extract and save embeddings and predictions from [HuggingFace](https://huggingface.co/models?pipeline_tag=text-classification&sort=trending&search=sentiment) models, run
+```bash
+python scripts/save_embeddings.py --out /work/courses/pmlr/17/embeddings --pipeline huggingface --model <model_name>
+```
+
 To load the embeddings, use
 ```python
 TBD
