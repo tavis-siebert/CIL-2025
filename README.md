@@ -1,11 +1,15 @@
 # CIL-2025 Sentiment Analysis
 
 ## Setup (dev)
-If you plan to develop in this repository, please install the [pre-commit](https://pre-commit.com/) hooks:
+If you plan to develop in this repository, run
 ```
-pip install pre-commit
+pip install -r requirements_dev.txt
 pre-commit install
+nbstripout --install
 ```
+to install the [pre-commit](https://pre-commit.com/) and [nbstripout](https://github.com/kynan/nbstripout) hooks.
+
+To contribute to this repository, please work on a branch named `<name>/<description>` and create pull requests.
 
 ## Add a pipeline
 To add new pipelines, create the following two files
