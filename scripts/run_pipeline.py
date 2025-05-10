@@ -9,11 +9,9 @@ from pathlib import Path
 
 from sklearn.model_selection import train_test_split
 
+from cache import CACHE
 from pipelines import load_pipeline
 from utils import (
-    CACHE,
-    LABEL_MAPPING_CLA,
-    LABEL_MAPPING_REG,
     evaluate_score,
     get_config,
     get_device,
@@ -37,17 +35,10 @@ def main(args):
 
     # load pipeline
     pipeline = load_pipeline(config.pipeline, device=device)
-    logger.info(f"Loaded pipeline '{config.pipeline.name}'.")
-
-    if config.label_mapping == "regression":
-        label_mapping = LABEL_MAPPING_REG
-    elif config.label_mapping == "classification":
-        label_mapping = LABEL_MAPPING_CLA
-    else:
-        raise ValueError(f"Unknown label mapping: {config.label_mapping}")
+    logger.info(f"Loaded pipeline: {config.pipeline.name}")
 
     # load train dataset and create splits
-    train_dataset = load_data(Path(args.data) / "training.csv", label_mapping=label_mapping)
+    train_dataset = load_data(Path(args.data) / "training.csv")
     train_sentences, val_sentences, train_labels, val_labels = train_test_split(
         train_dataset["sentence"],
         train_dataset["label"],
@@ -72,7 +63,7 @@ def main(args):
     test_predictions = pipeline.predict(test_sentences)
 
     # save predictions
-    save_predictions(args.out, test_ids, test_predictions, label_mapping)
+    save_predictions(args.out, test_ids, test_predictions)
 
 
 if __name__ == "__main__":

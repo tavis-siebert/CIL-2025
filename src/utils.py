@@ -9,9 +9,6 @@ from sklearn.metrics import mean_absolute_error
 
 logger = logging.getLogger(__name__)
 
-LABEL_MAPPING_REG = {"negative": -1, "neutral": 0, "positive": 1}
-LABEL_MAPPING_CLA = {"negative": 0, "neutral": 1, "positive": 2}
-
 
 def setup_logging(level=logging.INFO, format=None, dateformat=None, other_loggers=[]):
     if format is None:
@@ -30,9 +27,6 @@ def setup_logging(level=logging.INFO, format=None, dateformat=None, other_logger
 
 
 def get_config(config_path, overwrite={}, verbose=True):
-    if verbose:
-        logger.info(f"Loading the config file from '{config_path}'.")
-
     # load the config file
     config = OmegaConf.load(config_path)
 
@@ -41,6 +35,8 @@ def get_config(config_path, overwrite={}, verbose=True):
         overwrite = [f"{key}={value if value is not None else 'null'}" for key, value in overwrite.items()]
     config.merge_with_dotlist(overwrite)
 
+    if verbose:
+        logger.info(f"Loaded config: {config_path}")
     return config
 
 
@@ -57,32 +53,49 @@ def get_device(device="auto", verbose=True):
 
     if verbose:
         logger.info(f"Using device: {device}")
-
     return device
 
 
-def load_data(path, label_mapping=None):
-    # load data
-    dataset = pd.read_csv(path, index_col=0)
-    # apply label mapping
-    if label_mapping is not None:
-        dataset["label"] = dataset["label"].map(label_mapping)
+def _check_valid_labels(labels):
+    valid_labels = ["negative", "neutral", "positive"]
+    if not pd.Series(labels).isin(valid_labels).all():
+        raise ValueError(f"Labels contain invalid labels. Allowed labels are: {valid_labels}")
 
+
+def load_data(path):
+    dataset = pd.read_csv(path, index_col=0)
     return dataset
 
 
-def evaluate_score(labels, predictions):
-    return 0.5 * (2 - mean_absolute_error(labels, predictions))
+def apply_label_mapping(labels, label_mapping):
+    labels = pd.Series(labels).map(label_mapping)
+    return labels
 
 
-def save_predictions(path, ids, predictions, label_mapping):
-    submission = pd.DataFrame({"id": ids, "label": predictions})
-
-    # revert label mapping
+def apply_inverse_label_mapping(labels, label_mapping):
     label_mapping_rev = {value: key for key, value in label_mapping.items()}
-    submission["label"] = submission["label"].map(label_mapping_rev)
+    labels = pd.Series(labels).map(label_mapping_rev)
+    return labels
 
-    # save submission
+
+def evaluate_score(labels, predictions):
+    _check_valid_labels(labels)
+    _check_valid_labels(predictions)
+
+    # convert labels to numeric labels
+    label_mapping = {"negative": -1, "neutral": 0, "positive": 1}
+    labels = apply_label_mapping(labels, label_mapping)
+    predictions = apply_label_mapping(predictions, label_mapping)
+
+    # compute the score
+    score = 0.5 * (2 - mean_absolute_error(labels, predictions))
+    return score
+
+
+def save_predictions(path, ids, predictions):
+    _check_valid_labels(predictions)
+
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    submission = pd.DataFrame({"id": ids, "label": predictions})
     submission.to_csv(path, index=False)
     logger.info(f"Submission saved to '{path}'.")
