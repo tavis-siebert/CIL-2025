@@ -7,7 +7,10 @@ from .base import BasePipeline
 
 def map_to_labels(predictions, model_name):
     """Convert predicted class probabilities to labels."""
-    if model_name == "cardiffnlp/twitter-roberta-base-sentiment-latest":
+    if model_name in [
+        "cardiffnlp/twitter-roberta-base-sentiment-latest",
+        "cardiffnlp/twitter-xlm-roberta-base-sentiment",
+    ]:
         return predictions.idxmax(axis=1)
     elif model_name == "nlptown/bert-base-multilingual-uncased-sentiment":
         predictions = pd.DataFrame({
