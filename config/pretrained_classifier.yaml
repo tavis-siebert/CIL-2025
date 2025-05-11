@@ -1,0 +1,11 @@
+seed: 0
+val_split_size: 0.1
+
+pipeline:
+  name: pretrained_classifier.PretrainedClassifier
+
+  model: cardiffnlp/twitter-roberta-base-sentiment-latest
+  # model: cardiffnlp/twitter-xlm-roberta-base
+  # model: nlptown/bert-base-multilingual-uncased-sentiment
+  # model: siebert/sentiment-roberta-large-english
+  # model: tabularisai/multilingual-sentiment-analysis
