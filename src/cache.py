@@ -15,7 +15,7 @@ class Cache:
     def __init__(self, **kwargs):
         self.init(**kwargs)
 
-    def init(self, cache_dir: str | None = None):
+    def init(self, cache_dir: str | Path | None = None):
         if cache_dir is not None:
             self.cache_dir = Path(cache_dir)
             logger.info(f"Cache directory: {self.cache_dir}")
@@ -63,7 +63,7 @@ class Cache:
             elif path.suffix == ".csv":
                 if not isinstance(output, pd.DataFrame):
                     raise ValueError(f"Output is not a pd.DataFrame: {type(output)}")
-                output.to_csv(path, index=False, **save_kwargs)
+                output.to_csv(path, **save_kwargs)
             elif path.suffix == ".pkl":
                 with open(path, "wb") as file:
                     pickle.dump(output, file, protocol=pickle.HIGHEST_PROTOCOL, **save_kwargs)
