@@ -1,0 +1,13 @@
+seed: 0
+val_split_size: 0.1
+
+pipeline:
+  name: base_classifier.BaseClassifier
+
+  embed_type: mean
+  embed_pipeline: huggingface
+  embed_model: microsoft/deberta-v3-base #FacebookAI/roberta-base, xlnet/xlnet-base-cased, cardiffnlp/twitter-roberta-base-emotion
+
+  mode: classification
+  num_epochs: 20
+  batch_size: 64
