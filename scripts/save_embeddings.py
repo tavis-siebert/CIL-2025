@@ -132,7 +132,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--pipeline",
-        default="st",
+        default="sentencetransformer",
         choices=["sentencetransformer", "huggingface"],
         help="The type of the pipeline to use.",
     )
