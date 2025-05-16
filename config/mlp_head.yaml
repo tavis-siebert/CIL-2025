@@ -2,7 +2,7 @@ seed: 0
 val_split_size: 0.1
 
 pipeline:
-  name: base_classifier.BaseClassifier
+  name: mlp_head.MLPHeadModel
 
   embed_type: mean
   embed_pipeline: huggingface

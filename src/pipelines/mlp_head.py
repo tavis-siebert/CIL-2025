@@ -7,7 +7,7 @@ from cache import load_embeddings
 from utils import apply_label_mapping, apply_inverse_label_mapping
 from .base import BasePipeline
 
-class BaseClassifier(BasePipeline):
+class MLPHeadModel(BasePipeline):
     """
     Implements a linear head over 
     """
@@ -60,7 +60,6 @@ class BaseClassifier(BasePipeline):
         train_dataset = torch.utils.data.TensorDataset(train_embeddings, train_labels)
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.config.batch_size, shuffle=True)
 
-        criterion = nn.CrossEntropyLoss() if self.config.mode == 'classification' else nn.L1Loss()
         optimizer = torch.optim.Adam(self.classifier.parameters(), lr=1e-4, weight_decay=0.01)
 
         self.classifier.train()

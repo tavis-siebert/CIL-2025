@@ -55,7 +55,7 @@ class MLP(nn.Module):
         return self.net(x)
 
 
-class BoostedMLP(BasePipeline):
+class BoostedMLPHeadModel(BasePipeline):
     def __init__(
         self, 
         config: DictConfig | ListConfig, 
