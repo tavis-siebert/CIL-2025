@@ -7,6 +7,7 @@ import argparse
 import logging
 from pathlib import Path
 
+from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 
 from cache import CACHE
@@ -34,7 +35,7 @@ def main(args):
     device = get_device(args.device, verbose=False)
 
     # load pipeline
-    pipeline = load_pipeline(config.pipeline, device=device)
+    pipeline = load_pipeline(config.pipeline, device=device, output_dir=args.out, debug=args.debug)
     logger.info(f"Loaded pipeline: {config.pipeline.name}")
 
     # load train dataset and create splits
@@ -47,17 +48,31 @@ def main(args):
         random_state=config.seed,
     )
 
+    if args.debug:
+        train_sentences = train_sentences[:100]
+        train_labels = train_labels[:100]
+        val_sentences = val_sentences[:10]
+        val_labels = val_labels[:10]
+
     # train and evaluate the model
     train_predictions, val_predictions = pipeline.train(train_sentences, train_labels, val_sentences, val_labels)
     score_train = evaluate_score(train_labels, train_predictions)
     score_val = evaluate_score(val_labels, val_predictions)
-    logger.info(f"Score (training set): {score_train:.05f}")
-    logger.info(f"Score (validation set): {score_val:.05f}")
+    cm_train = confusion_matrix(train_labels, train_predictions)
+    cm_val = confusion_matrix(train_labels, train_predictions)
+    logger.info(f"Score (train): {score_train:.05f}")
+    logger.info(f"Score (val): {score_val:.05f}")
+    logger.info(f"Confusion matrix (train):\n{cm_train}")
+    logger.info(f"Confusion matrix (val):\n{cm_val}")
 
     # load test dataset
     test_dataset = load_data(Path(args.data) / "test.csv")
     test_ids = test_dataset.index
     test_sentences = test_dataset["sentence"]
+
+    if args.debug:
+        test_ids = test_ids[:10]
+        test_sentences = test_sentences[:10]
 
     # make predictions
     test_predictions = pipeline.predict(test_sentences)
@@ -97,6 +112,11 @@ if __name__ == "__main__":
         "--device",
         default="auto",
         help="The device on which to compute. (default: auto)",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Flag whether to run in debug mode.",
     )
     args = parser.parse_args()
 
