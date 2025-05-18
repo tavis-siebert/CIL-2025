@@ -63,7 +63,7 @@ def main(args):
     test_predictions = pipeline.predict(test_sentences)
 
     # save predictions
-    save_predictions(args.out, test_ids, test_predictions)
+    save_predictions(args.out / "submission.csv", test_ids, test_predictions)
 
 
 if __name__ == "__main__":
@@ -89,8 +89,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--out",
-        default="output/submissions/submission.csv",
-        help="The path to the submission file. (default: output/submissions/submission.csv)",
+        type=Path,
+        default="output/submissions",
+        help="The path to the output folder containing the submission file. (default: output/submissions)",
     )
     parser.add_argument(
         "--device",
