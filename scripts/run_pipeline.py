@@ -4,9 +4,11 @@ from pathlib import Path
 sys.path.append(str((Path(__file__).parent / ".." / "src").absolute()))
 
 import argparse
+import contextlib
 import logging
 from pathlib import Path
 
+from omegaconf import OmegaConf
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 
@@ -34,51 +36,63 @@ def main(args):
     # get device handler
     device = get_device(args.device, verbose=False)
 
-    # load pipeline
-    pipeline = load_pipeline(config.pipeline, device=device, output_dir=args.out, debug=args.debug)
-    logger.info(f"Loaded pipeline: {config.pipeline.name}")
+    # initialize context
+    if args.report_to is not None:
+        import wandb
+        context = wandb.init(
+            entity=args.report_to[0],
+            project=args.report_to[1],
+            config=OmegaConf.to_object(config),
+        )
+    else:
+        context = contextlib.nullcontext()
 
-    # load train dataset and create splits
-    train_dataset = load_data(Path(args.data) / "training.csv")
-    train_sentences, val_sentences, train_labels, val_labels = train_test_split(
-        train_dataset["sentence"],
-        train_dataset["label"],
-        test_size=config.val_split_size,
-        stratify=train_dataset["label"],
-        random_state=config.seed,
-    )
+    with context:
+        # load pipeline
+        pipeline = load_pipeline(config.pipeline, device=device, output_dir=args.out, debug=args.debug)
+        logger.info(f"Loaded pipeline: {config.pipeline.name}")
 
-    if args.debug:
-        train_sentences = train_sentences[:100]
-        train_labels = train_labels[:100]
-        val_sentences = val_sentences[:10]
-        val_labels = val_labels[:10]
+        # load train dataset and create splits
+        train_dataset = load_data(Path(args.data) / "training.csv")
+        train_sentences, val_sentences, train_labels, val_labels = train_test_split(
+            train_dataset["sentence"],
+            train_dataset["label"],
+            test_size=config.val_split_size,
+            stratify=train_dataset["label"],
+            random_state=config.seed,
+        )
 
-    # train and evaluate the model
-    train_predictions, val_predictions = pipeline.train(train_sentences, train_labels, val_sentences, val_labels)
-    score_train = evaluate_score(train_labels, train_predictions)
-    score_val = evaluate_score(val_labels, val_predictions)
-    cm_train = confusion_matrix(train_labels, train_predictions)
-    cm_val = confusion_matrix(train_labels, train_predictions)
-    logger.info(f"Score (train): {score_train:.05f}")
-    logger.info(f"Score (val): {score_val:.05f}")
-    logger.info(f"Confusion matrix (train):\n{cm_train}")
-    logger.info(f"Confusion matrix (val):\n{cm_val}")
+        if args.debug:
+            train_sentences = train_sentences[:100]
+            train_labels = train_labels[:100]
+            val_sentences = val_sentences[:10]
+            val_labels = val_labels[:10]
 
-    # load test dataset
-    test_dataset = load_data(Path(args.data) / "test.csv")
-    test_ids = test_dataset.index
-    test_sentences = test_dataset["sentence"]
+        # train and evaluate the model
+        train_predictions, val_predictions = pipeline.train(train_sentences, train_labels, val_sentences, val_labels)
+        score_train = evaluate_score(train_labels, train_predictions)
+        score_val = evaluate_score(val_labels, val_predictions)
+        cm_train = confusion_matrix(train_labels, train_predictions)
+        cm_val = confusion_matrix(train_labels, train_predictions)
+        logger.info(f"Score (train): {score_train:.05f}")
+        logger.info(f"Score (val): {score_val:.05f}")
+        logger.info(f"Confusion matrix (train):\n{cm_train}")
+        logger.info(f"Confusion matrix (val):\n{cm_val}")
 
-    if args.debug:
-        test_ids = test_ids[:10]
-        test_sentences = test_sentences[:10]
+        # load test dataset
+        test_dataset = load_data(Path(args.data) / "test.csv")
+        test_ids = test_dataset.index
+        test_sentences = test_dataset["sentence"]
 
-    # make predictions
-    test_predictions = pipeline.predict(test_sentences)
+        if args.debug:
+            test_ids = test_ids[:10]
+            test_sentences = test_sentences[:10]
 
-    # save predictions
-    save_predictions(args.out / "submission.csv", test_ids, test_predictions)
+        # make predictions
+        test_predictions = pipeline.predict(test_sentences)
+
+        # save predictions
+        save_predictions(args.out / "submission.csv", test_ids, test_predictions)
 
 
 if __name__ == "__main__":
@@ -112,6 +126,13 @@ if __name__ == "__main__":
         "--device",
         default="auto",
         help="The device on which to compute. (default: auto)",
+    )
+    parser.add_argument(
+        "--report-to",
+        nargs=2,
+        default=None,
+        metavar=("ENTITY", "PROJECT"),
+        help="The W&B target entity and project name. (default: None)",
     )
     parser.add_argument(
         "--debug",
