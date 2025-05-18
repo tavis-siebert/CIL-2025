@@ -24,6 +24,9 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+def is_wandb_logging():
+    return wandb is not None and wandb.run is not None
+
 
 class FinetunedClassifier(BasePipeline):
     """Finetuned sentiment classifier."""
@@ -43,14 +46,20 @@ class FinetunedClassifier(BasePipeline):
             **self.config.model, label2id=label2id, id2label=id2label
         )
         model = model.to(self.device)
-        logger.info(f"Loaded model: {self.config.model.pretrained_model_name_or_path}")
+        logger.info(f"Loaded model: {self.config.model.pretrained_model_name_or_path}\n{model}")
         logger.info(f"Using device: {model.device}")
 
-        # add PEFT adapter to model
-        if "peft" in self.config:
+        # reduce parameters to finetune
+        if "freeze" in self.config:
+            # freeze specified modules
+            for module_path in self.config.freeze:
+                for param in model.get_submodule(module_path).parameters():
+                    param.requires_grad = False
+            logger.info(f"Froze parameters of modules: {self.config.freeze}")
+        elif "peft" in self.config:
+            # add PEFT adapter to model
             model = get_peft_model(model, LoraConfig(**self.config.peft))
-
-        # TODO freeze model parameters
+            logger.info(f"Using PEFT adapter: {self.config.peft}")
 
         # print model summary
         if isinstance(model, PeftModel):
@@ -83,9 +92,11 @@ class FinetunedClassifier(BasePipeline):
         eval_dataset = self._prepare_dataset(val_sentences, val_labels, desc="val")
 
         # train the model
+        # TODO use weighted loss to handle imbalanced classes
         data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)
         trainer_config = TrainingArguments(
             output_dir=self.output_dir,
+            report_to="wandb" if is_wandb_logging() else "none",
             **self.config.trainer,
         )
         self.trainer = Trainer(
@@ -144,7 +155,7 @@ class FinetunedClassifier(BasePipeline):
         predictions = np.argmax(logits, axis=-1)
 
         # log to wandb if available
-        if wandb is not None and wandb.run is not None:
+        if is_wandb_logging():
             wandb.log({"confusion_matrix": wandb.plot.confusion_matrix(probs=logits, y_true=labels, class_names=list(self.config.label_mapping.keys()))})
 
         return {

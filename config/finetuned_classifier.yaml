@@ -19,12 +19,27 @@ pipeline:
     # pretrained_model_name_or_path: tabularisai/multilingual-sentiment-analysis
     num_labels: 3
 
-  peft:
-    r: 8
-    lora_alpha: 16
-    lora_dropout: 0.1
-    bias: none
-    task_type: SEQ_CLS
+  # freeze:
+  #   - roberta.embeddings
+  #   - roberta.encoder.layer.0
+  #   - roberta.encoder.layer.1
+  #   - roberta.encoder.layer.2
+  #   - roberta.encoder.layer.3
+  #   - roberta.encoder.layer.4
+  #   - roberta.encoder.layer.5
+  #   - roberta.encoder.layer.6
+  #   - roberta.encoder.layer.7
+  #   - roberta.encoder.layer.8
+  #   - roberta.encoder.layer.9
+  #   - roberta.encoder.layer.10
+  #   - roberta.encoder.layer.11
+
+  # peft:
+  #   r: 32
+  #   lora_alpha: 64
+  #   lora_dropout: 0.05
+  #   bias: none
+  #   task_type: SEQ_CLS
 
   preprocessing:
     batch_size: 32
