@@ -7,6 +7,7 @@ import argparse
 import logging
 from pathlib import Path
 
+from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 
 from cache import CACHE
@@ -57,8 +58,12 @@ def main(args):
     train_predictions, val_predictions = pipeline.train(train_sentences, train_labels, val_sentences, val_labels)
     score_train = evaluate_score(train_labels, train_predictions)
     score_val = evaluate_score(val_labels, val_predictions)
-    logger.info(f"Score (training set): {score_train:.05f}")
-    logger.info(f"Score (validation set): {score_val:.05f}")
+    cm_train = confusion_matrix(train_labels, train_predictions)
+    cm_val = confusion_matrix(train_labels, train_predictions)
+    logger.info(f"Score (train): {score_train:.05f}")
+    logger.info(f"Score (val): {score_val:.05f}")
+    logger.info(f"Confusion matrix (train):\n{cm_train}")
+    logger.info(f"Confusion matrix (val):\n{cm_val}")
 
     # load test dataset
     test_dataset = load_data(Path(args.data) / "test.csv")
