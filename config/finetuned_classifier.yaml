@@ -1,0 +1,54 @@
+seed: 0
+deterministic: False
+
+val_split_size: 0.1
+
+pipeline:
+  name: finetuned_classifier.FinetunedClassifier
+
+  label_mapping:
+    negative: 0
+    neutral: 1
+    positive: 2
+
+  model:
+    pretrained_model_name_or_path: cardiffnlp/twitter-roberta-base-sentiment-latest
+    # pretrained_model_name_or_path: cardiffnlp/twitter-xlm-roberta-base
+    # pretrained_model_name_or_path: nlptown/bert-base-multilingual-uncased-sentiment
+    # pretrained_model_name_or_path: siebert/sentiment-roberta-large-english
+    # pretrained_model_name_or_path: tabularisai/multilingual-sentiment-analysis
+    num_labels: 3
+
+  preprocessing:
+    batch_size: 32
+
+    tokenizer:
+      padding: true
+      truncation: true
+      max_length: 512
+
+  trainer:
+    seed: ${seed}
+
+    # training parameters
+    per_device_train_batch_size: 16
+    gradient_accumulation_steps: 1
+    num_train_epochs: 2
+    learning_rate: 1e-6
+    lr_scheduler_type: constant
+
+    # eval parameters
+    per_device_eval_batch_size: 16
+    eval_strategy: steps
+    eval_steps: 0.02
+
+    # logging parameters
+    logging_strategy: steps
+    logging_steps: 0.001
+
+    # checkpointing parameters
+    save_strategy: steps
+    save_steps: 0.1
+    save_total_limit: 5
+    load_best_model_at_end: true
+    metric_for_best_model: eval_score

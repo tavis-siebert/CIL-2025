@@ -6,6 +6,7 @@ wandb
 
 scikit-learn
 transformers
+datasets
 accelerate
 huggingface_hub[hf_transfer,hf_xet] # for faster downloads
 sentence-transformers
