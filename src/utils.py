@@ -1,9 +1,11 @@
 import logging
 import os
+import random
 import sys
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import torch
 from omegaconf import DictConfig, ListConfig, OmegaConf
@@ -56,6 +58,36 @@ def get_device(device: str | torch.device = "auto", verbose: bool = True) -> tor
     if verbose:
         logger.info(f"Using device: {device}")
     return device
+
+
+def ensure_reproducibility(seed: int | None = None, deterministic: bool = False, verbose: bool = True):
+    """Set seeds and ensures usage of deterministic algorithms.
+
+    Args:
+        seed (int, optional): The seed set for each dataloader worker. Defaults
+            to None.
+        deterministic (bool, optional): Flag whether algorithms should be as
+            deterministic as possible. Defaults to False.
+        verbose (bool, optional): Flag whether to be verbose. Defaults to True.
+
+    References:
+        [1] https://pytorch.org/docs/stable/notes/randomness.html
+    """
+    # seed random number generators
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        if verbose:
+            logger.info(f"Set seeds: {seed}")
+
+    # use deterministic algorithms
+    if deterministic:
+        torch.use_deterministic_algorithms(True, warn_only=True)
+        torch.backends.cudnn.benchmark = False
+        os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+        if verbose:
+            logger.info("Enabled deterministic algorithms.")
 
 
 def _check_valid_labels(labels):

@@ -15,6 +15,7 @@ from sklearn.model_selection import train_test_split
 from cache import CACHE
 from pipelines import load_pipeline
 from utils import (
+    ensure_reproducibility,
     evaluate_score,
     get_config,
     get_device,
@@ -48,6 +49,9 @@ def main(args):
         context = contextlib.nullcontext()
 
     with context:
+        # set seeds and use deterministic algorithms
+        ensure_reproducibility(seed=config.seed, deterministic=config.deterministic)
+
         # load pipeline
         pipeline = load_pipeline(config.pipeline, device=device, output_dir=args.out, debug=args.debug)
         logger.info(f"Loaded pipeline: {config.pipeline.name}")
