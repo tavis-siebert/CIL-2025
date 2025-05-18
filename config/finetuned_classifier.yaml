@@ -19,6 +19,13 @@ pipeline:
     # pretrained_model_name_or_path: tabularisai/multilingual-sentiment-analysis
     num_labels: 3
 
+  peft:
+    r: 8
+    lora_alpha: 16
+    lora_dropout: 0.1
+    bias: none
+    task_type: SEQ_CLS
+
   preprocessing:
     batch_size: 32
 

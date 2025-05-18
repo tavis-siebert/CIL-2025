@@ -3,6 +3,7 @@ import logging
 import numpy as np
 from datasets import Dataset
 from omegaconf import OmegaConf
+from peft import LoraConfig, PeftModel, get_peft_model
 from sklearn.metrics import confusion_matrix
 from transformers import (
     AutoModelForSequenceClassification,
@@ -45,19 +46,25 @@ class FinetunedClassifier(BasePipeline):
         logger.info(f"Loaded model: {self.config.model.pretrained_model_name_or_path}")
         logger.info(f"Using device: {model.device}")
 
-        self.model = model
-        self.tokenizer = tokenizer
+        # add PEFT adapter to model
+        if "peft" in self.config:
+            model = get_peft_model(model, LoraConfig(**self.config.peft))
 
         # TODO freeze model parameters
-        # TODO use PEFT
 
         # print model summary
-        n_params_total = sum(p.numel() for p in model.parameters())
-        n_params_trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        if isinstance(model, PeftModel):
+            n_params_trainable, n_params_total = model.get_nb_trainable_parameters()
+        else:
+            n_params_total = sum(p.numel() for p in model.parameters())
+            n_params_trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
         logger.info(
             f"Number of trainable parameters: {n_params_trainable:,d} / {n_params_total:,d}"
             f" ({100 * n_params_trainable / n_params_total:.2f}%)"
         )
+
+        self.model = model
+        self.tokenizer = tokenizer
 
         if self.debug:
             self.config.trainer.max_steps = 3
