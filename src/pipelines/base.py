@@ -12,11 +12,13 @@ class BasePipeline:
         config: DictConfig | ListConfig,
         device: str | torch.device | None = None,
         output_dir: str = "output",
+        debug: bool = False,
         **kwargs,
     ):
         self.config = config
         self.device = device
         self.output_dir = output_dir
+        self.debug = debug
 
     def train(
         self,
