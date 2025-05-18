@@ -15,6 +15,7 @@ from tqdm.auto import tqdm
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from cache import CACHE, get_embeddings_folder, save_embeddings
+from pipelines.pretrained_classifier import preprocess_data
 from utils import get_device, load_data, setup_logging
 
 logger = logging.getLogger(__name__)
@@ -64,7 +65,7 @@ def main(args):
             dataloader = torch.utils.data.DataLoader(
                 sentences,
                 batch_size=batch_size,
-                collate_fn=lambda x: tokenizer(x, return_tensors="pt", padding=True, truncation=True, max_length=512),
+                collate_fn=lambda sentences: tokenizer([preprocess_data(s, args.model) for s in sentences], return_tensors="pt", padding=True, truncation=True, max_length=512),
                 shuffle=False,
             )
 
