@@ -1,8 +1,34 @@
+import string
+
 import pandas as pd
 
 from cache import load_embeddings
 
 from .base import BasePipeline
+
+
+def preprocess_data(text: str, model_name: str) -> str:
+    """Apply preprocessing of pre-trained models to the text."""
+
+    if model_name in [
+        "cardiffnlp/twitter-roberta-base-sentiment-latest",
+        "cardiffnlp/twitter-xlm-roberta-base-sentiment",
+    ]:
+        # reference: https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest
+        new_text = []
+        for t in text.split(" "):
+            t = '@user' if t.startswith('@') and len(t) > 1 else t
+            t = 'http' if t.startswith('http') else t
+            new_text.append(t)
+        return " ".join(new_text)
+    elif model_name in [
+        "helinivan/english-sarcasm-detector",
+        "helinivan/multilingual-sarcasm-detector",
+    ]:
+        # reference: https://huggingface.co/helinivan/english-sarcasm-detector
+        return text.lower().translate(str.maketrans("", "", string.punctuation)).strip()
+    else:
+        return text
 
 
 def map_to_labels(predictions, model_name):
