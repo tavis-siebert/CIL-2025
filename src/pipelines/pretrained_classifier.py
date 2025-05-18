@@ -35,12 +35,12 @@ def map_to_labels(predictions, model_name):
 class PretrainedClassifier(BasePipeline):
     """Pretrained sentiment classifier."""
 
-    def __init__(self, config, device=None, verbose=True):
-        self.config = config
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         # load predictions from embeddings cache
-        self.predictions_train = load_embeddings("huggingface", config.model, "predictions_train.csv", load_kwargs={"index_col": 0}, verbose=verbose)
-        self.predictions_test = load_embeddings("huggingface", config.model, "predictions_test.csv", load_kwargs={"index_col": 0}, verbose=verbose)
+        self.predictions_train = load_embeddings("huggingface", self.config.model, "predictions_train.csv", load_kwargs={"index_col": 0})
+        self.predictions_test = load_embeddings("huggingface", self.config.model, "predictions_test.csv", load_kwargs={"index_col": 0})
 
     def train(self, train_sentences, train_labels, val_sentences, val_labels):
         predictions_train = self.predictions_train.iloc[train_sentences.index]

@@ -11,25 +11,25 @@ from .base import BasePipeline
 class BaselineBowLogreg(BasePipeline):
     """Bag-of-words and logistic regression baseline taken from the provided notebook."""
 
-    def __init__(self, config, device=None):
-        self.config = config
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         # configure label mapping
-        if config.label_mapping == "regression":
+        if self.config.label_mapping == "regression":
             self.label_mapping = {"negative": -1, "neutral": 0, "positive": 1}
-        elif config.label_mapping == "classification":
+        elif self.config.label_mapping == "classification":
             self.label_mapping = {"negative": 0, "neutral": 1, "positive": 2}
         else:
-            raise ValueError(f"Unknown label mapping: {config.label_mapping}")
+            raise ValueError(f"Unknown label mapping: {self.config.label_mapping}")
 
         # configure bag-of-words
-        config_bow = OmegaConf.to_container(config.bow)
+        config_bow = OmegaConf.to_container(self.config.bow)
         if "ngram_range" in config_bow:
             config_bow["ngram_range"] = tuple(config_bow["ngram_range"])
         self.vectorizer = CountVectorizer(**config_bow)
 
         # configure logistic regression
-        self.model = LogisticRegression(**config.logreg)
+        self.model = LogisticRegression(**self.config.logreg)
 
     def train(self, train_sentences, train_labels, val_sentences, val_labels):
         # apply label mapping
