@@ -1,10 +1,12 @@
 import logging
 
 import numpy as np
+import torch
 from datasets import Dataset
 from omegaconf import OmegaConf
 from peft import LoraConfig, PeftModel, get_peft_model
 from sklearn.metrics import confusion_matrix
+from torch import nn
 from transformers import (
     AutoModelForSequenceClassification,
     AutoTokenizer,
@@ -24,8 +26,28 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
 def is_wandb_logging():
     return wandb is not None and wandb.run is not None
+
+
+class WeightedLossTrainerConfig(TrainingArguments):
+    def __init__(self, *args, class_weights=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.class_weights = class_weights
+
+
+# reference: https://huggingface.co/docs/transformers/trainer
+class WeightedLossTrainer(Trainer):
+    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+        labels = inputs.pop("labels")
+        # forward pass
+        outputs = model(**inputs)
+        logits = outputs.get("logits")
+        # compute custom loss for 3 labels with different weights
+        loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(self.args.class_weights, device=model.device))
+        loss = loss_fn(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+        return (loss, outputs) if return_outputs else loss
 
 
 class FinetunedClassifier(BasePipeline):
@@ -94,12 +116,12 @@ class FinetunedClassifier(BasePipeline):
         # train the model
         # TODO use weighted loss to handle imbalanced classes
         data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)
-        trainer_config = TrainingArguments(
+        trainer_config = WeightedLossTrainerConfig(
             output_dir=self.output_dir,
             report_to="wandb" if is_wandb_logging() else "none",
             **self.config.trainer,
         )
-        self.trainer = Trainer(
+        self.trainer = WeightedLossTrainer(
             model=self.model,
             args=trainer_config,
             data_collator=data_collator,
@@ -156,7 +178,10 @@ class FinetunedClassifier(BasePipeline):
 
         # log to wandb if available
         if is_wandb_logging():
-            wandb.log({"confusion_matrix": wandb.plot.confusion_matrix(probs=logits, y_true=labels, class_names=list(self.config.label_mapping.keys()))})
+            cm = wandb.plot.confusion_matrix(
+                probs=logits, y_true=labels, class_names=list(self.config.label_mapping.keys())
+            )
+            wandb.log({"confusion_matrix": cm})
 
         return {
             "accuracy": np.mean(predictions == labels),
