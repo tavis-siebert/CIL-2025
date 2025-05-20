@@ -49,7 +49,7 @@ pipeline:
     seed: ${seed}
 
     # objective parameters
-    class_weights: [1.553279, 1.553279, 1.553279]
+    class_weights: [1.553279, 0.692446, 1.096438]
 
     # training parameters
     per_device_train_batch_size: 16

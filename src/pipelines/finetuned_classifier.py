@@ -45,7 +45,11 @@ class WeightedLossTrainer(Trainer):
         outputs = model(**inputs)
         logits = outputs.get("logits")
         # compute custom loss for 3 labels with different weights
-        loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(self.args.class_weights, device=model.device))
+        if self.args.class_weights is not None:
+            class_weights = torch.tensor(self.args.class_weights, device=model.device)
+        else:
+            class_weights = None
+        loss_fn = nn.CrossEntropyLoss(weight=class_weights)
         loss = loss_fn(logits.view(-1, self.model.config.num_labels), labels.view(-1))
         return (loss, outputs) if return_outputs else loss
 
@@ -114,7 +118,6 @@ class FinetunedClassifier(BasePipeline):
         eval_dataset = self._prepare_dataset(val_sentences, val_labels, desc="val")
 
         # train the model
-        # TODO use weighted loss to handle imbalanced classes
         data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)
         trainer_config = WeightedLossTrainerConfig(
             output_dir=self.output_dir,
