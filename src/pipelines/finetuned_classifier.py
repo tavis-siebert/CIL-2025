@@ -104,7 +104,7 @@ class FinetunedClassifier(BasePipeline):
             self.config.trainer.save_strategy = "no"
             self.config.trainer.load_best_model_at_end = False
 
-    def train(self, train_sentences, train_labels, val_sentences, val_labels):
+    def train(self, train_sentences, train_labels, val_sentences, val_labels, resume_from_checkpoint=None, **kwargs):
         # apply label mapping
         train_labels = apply_label_mapping(train_labels, self.config.label_mapping)
         val_labels = apply_label_mapping(val_labels, self.config.label_mapping)
@@ -129,7 +129,7 @@ class FinetunedClassifier(BasePipeline):
             eval_dataset=eval_dataset,
             compute_metrics=self._compute_metrics,
         )
-        self.trainer.train()
+        self.trainer.train(resume_from_checkpoint=resume_from_checkpoint)
 
         # predict
         train_predictions = self.trainer.predict(train_dataset).predictions.argmax(axis=1)
