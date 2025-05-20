@@ -45,8 +45,7 @@ class MLPHeadModel(BasePipeline):
             nn.Linear(256, out_size)
         ).to(self.device)
 
-
-    def train(self, train_sentences, train_labels, val_sentences, val_labels):
+    def train(self, train_sentences, train_labels, val_sentences, val_labels, **kwargs):
 
         embeddings = self.embeddings['train_embeddings']
 

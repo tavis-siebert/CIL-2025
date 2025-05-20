@@ -108,7 +108,7 @@ class ClassicalMLPipeline(BasePipeline):
         # configure preprocessing
         self.preprocessing_rules = set(OmegaConf.to_container(config.preprocessing)) if "preprocessing" in config else None
 
-    def train(self, train_sentences, train_labels, val_sentences, val_labels):
+    def train(self, train_sentences, train_labels, val_sentences, val_labels, **kwargs):
         # apply label mapping
         if self.label_mapping:
             train_labels = apply_label_mapping(train_labels, self.label_mapping)

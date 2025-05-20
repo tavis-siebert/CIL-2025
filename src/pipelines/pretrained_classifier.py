@@ -1,10 +1,10 @@
 import string
 
 import pandas as pd
-
 from omegaconf import DictConfig, ListConfig
 
 from cache import load_embeddings
+
 from .base import BasePipeline
 
 
@@ -76,7 +76,7 @@ class PretrainedClassifier(BasePipeline):
         self.predictions_train = load_embeddings("huggingface", self.config.model, "predictions_train.csv", load_kwargs={"index_col": 0})
         self.predictions_test = load_embeddings("huggingface", self.config.model, "predictions_test.csv", load_kwargs={"index_col": 0})
 
-    def train(self, train_sentences, train_labels, val_sentences, val_labels):
+    def train(self, train_sentences, train_labels, val_sentences, val_labels, **kwargs):
         predictions_train = self.predictions_train.iloc[train_sentences.index]
         predictions_val = self.predictions_train.iloc[val_sentences.index]
 

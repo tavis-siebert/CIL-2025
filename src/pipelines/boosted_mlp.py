@@ -132,7 +132,8 @@ class BoostedMLPHeadModel(BasePipeline):
         train_sentences: pd.Series,
         train_labels: pd.Series,
         val_sentences: pd.Series,
-        val_labels: pd.Series
+        val_labels: pd.Series,
+        **kwargs,
     ):
         embeddings = self.embeddings['train_embeddings']
 

@@ -40,15 +40,20 @@ def main(args):
     # initialize context
     if args.report_to is not None:
         import wandb
-        context = wandb.init(
-            entity=args.report_to[0],
-            project=args.report_to[1],
-            config=OmegaConf.to_object(config),
-        )
-    else:
-        context = contextlib.nullcontext()
 
-    with context:
+        kwargs = {
+            "entity": args.report_to[0],
+            "project": args.report_to[1],
+            "config": OmegaConf.to_object(config),
+        }
+        if args.resume_wandb is not None:
+            kwargs["resume"] = "must"
+            kwargs["id"] = args.resume_wandb
+        context_wandb = wandb.init(**kwargs)
+    else:
+        context_wandb = contextlib.nullcontext()
+
+    with context_wandb:
         # set seeds and use deterministic algorithms
         ensure_reproducibility(seed=config.seed, deterministic=config.deterministic)
 
@@ -77,7 +82,13 @@ def main(args):
             val_labels = val_labels[:10]
 
         # train and evaluate the model
-        train_predictions, val_predictions = pipeline.train(train_sentences, train_labels, val_sentences, val_labels)
+        train_predictions, val_predictions = pipeline.train(
+            train_sentences,
+            train_labels,
+            val_sentences,
+            val_labels,
+            resume_from_checkpoint=args.resume,
+        )
         score_train = evaluate_score(train_labels, train_predictions)
         score_val = evaluate_score(val_labels, val_predictions)
         cm_train = confusion_matrix(train_labels, train_predictions)
@@ -143,6 +154,21 @@ if __name__ == "__main__":
         default=None,
         metavar=("ENTITY", "PROJECT"),
         help="The W&B target entity and project name. (default: None)",
+    )
+    parser.add_argument(
+        "--resume",
+        nargs="?",
+        const=True,
+        default=False,
+        help=(
+            "Flag whether to resume training from the last checkpoint. "
+            "Optionally, a local path can be provided. (default: False)",
+        ),
+    )
+    parser.add_argument(
+        "--resume-wandb",
+        default=None,
+        help="The W&B run id which should be resumed (default: None).",
     )
     parser.add_argument(
         "--debug",

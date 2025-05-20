@@ -28,6 +28,7 @@ class BasePipeline:
         train_labels: pd.Series,
         val_sentences: pd.Series,
         val_labels: pd.Series,
+        **kwargs,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Train the model and make predictions for the training and validation set."""
         raise NotImplementedError()
