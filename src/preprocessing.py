@@ -5,7 +5,6 @@ from nltk.stem import PorterStemmer, WordNetLemmatizer
 
 REGEX_RULES = {
     "clean_whitespaces": (re.compile(r"\s{2,}"), " "),
-    "clean_repeated_chars": (re.compile(r"(.)\1{4,}"), "\1\1\1"),
 
     "internet/replace_urls": (re.compile(r"https?://\S+|www\.\S+"), "url"),
     "internet/replace_emails": (re.compile(r"\w+@\w+\.\w+"), "email"),
@@ -24,6 +23,7 @@ REGEX_RULES = {
     "contractions/replace_'d": (re.compile(r"(\w+)'d"), "\1 would"),
     "contractions/replace_'t": (re.compile(r"(\w+)'t"), "\1 not"),
 
+    "remove_repeated_chars": (re.compile(r"(.)\1{4,}"), "\1\1\1"),
     "remove_special_chars": (re.compile(r"[^a-zA-Z0-9\!\? ]"), ""),
 
     # "@ to at": (re.compile(r" \@ "), " at "),
@@ -39,12 +39,36 @@ REGEX_RULES = {
 }
 
 ALL_RULES = [
-    *REGEX_RULES.keys(),
+    "clean_whitespaces",
 
-    "lowercase",
+    "internet",
+    "internet/replace_urls",
+    "internet/replace_emails",
+    "internet/repalce_usernames",
+
+    "punctuation",
+    "punctuation/clean_!!",
+    "punctuation/clean_??",
+    "punctuation/clean_?!",
+    "punctuation/clean_!?",
+
+    "contractions",
+    "contractions/replace_'m",
+    "contractions/replace_'re",
+    "contractions/replace_'s",
+    "contractions/replace_'ve",
+    "contractions/replace_'ll",
+    "contractions/replace_'d",
+    "contractions/replace_'t",
+
+    "remove_repeated_chars",
+    "remove_special_chars",
+
     "stem",
     "lemmatize",
-    "remove_long_sentences",
+
+    "lowercase",
+
     # "stopwords",
 ]
 
@@ -104,10 +128,6 @@ def apply_preprocessing(
 
     # copy the sentences to avoid modifying the original
     sentences = sentences.copy()
-
-    # remove long sentences
-    if "remove_long_sentences" in active_rules:
-        sentences = sentences[sentences.apply(lambda x: len(x) <= LONG_SENTENCE_THRESHOLD)]
 
     # apply preprocessing rules on each sentence
     sentences = sentences.apply(lambda x: preprocess_text(x, active_rules=active_rules))
