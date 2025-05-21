@@ -1,0 +1,115 @@
+import re
+
+import pandas as pd
+from nltk.stem import PorterStemmer, WordNetLemmatizer
+
+REGEX_RULES = {
+    "clean_whitespaces": (re.compile(r"\s{2,}"), " "),
+    "clean_repeated_chars": (re.compile(r"(.)\1{4,}"), "\1\1\1"),
+
+    "internet/replace_urls": (re.compile(r"https?://\S+|www\.\S+"), "url"),
+    "internet/replace_emails": (re.compile(r"\w+@\w+\.\w+"), "email"),
+    "internet/repalce_usernames": (re.compile(r"@\w+"), "username"),
+
+    "punctuation/clean_!!": (re.compile(r"!{3,}"), "!!"),
+    "punctuation/clean_??": (re.compile(r"\?{3,}"), "??"),
+    "punctuation/clean_?!": (re.compile(r"\?+[\?!]+"), "?!"),
+    "punctuation/clean_!?": (re.compile(r"!+[\?!]+"), "!?"),
+
+    "contractions/replace_'m": (re.compile(r"(\w+)'m"), "\1 am"),
+    "contractions/replace_'re": (re.compile(r"(\w+)'re"), "\1 are"),
+    "contractions/replace_'s": (re.compile(r"(\w+)'s"), "\1 is"),
+    "contractions/replace_'ve": (re.compile(r"(\w+)'ve"), "\1 have"),
+    "contractions/replace_'ll": (re.compile(r"(\w+)'ll"), "\1 will"),
+    "contractions/replace_'d": (re.compile(r"(\w+)'d"), "\1 would"),
+    "contractions/replace_'t": (re.compile(r"(\w+)'t"), "\1 not"),
+
+    "remove_special_chars": (re.compile(r"[^a-zA-Z0-9\!\? ]"), ""),
+
+    # "@ to at": (re.compile(r" \@ "), " at "),
+    # "2 to to": (re.compile(r" 2 "), " to "),
+
+    #"long_numbers": (re.compile(r"[1-9]\d{2,}"), "99"),
+    #"single chars": (re.compile(r" [^ai] "), " "),
+
+    # "formatting *": (re.compile(r"\*+([^\* ]+)\*+"), "\1"),
+    # "formatting _": (re.compile(r"_+([^\* ]+)_+"), "\1"),
+
+    # "not": (re.compile(r"not (\w+)"), "not_\1"),
+}
+
+ALL_RULES = [
+    *REGEX_RULES.keys(),
+
+    "lowercase",
+    "stem",
+    "lemmatize",
+    "remove_long_sentences",
+    # "stopwords",
+]
+
+LONG_SENTENCE_THRESHOLD = 512
+
+
+def preprocess_text(
+    text: str,
+    active_rules: set[str],
+    # stopwords: set[str]|None = None,
+):
+    # apply regex rules
+    for name, rule in REGEX_RULES.items():
+        # get rule prefixes
+        rule_prefixes = name.split("/")
+        for i in range(1, len(rule_prefixes)):
+            rule_prefixes[i] = f"{rule_prefixes[i-1]}/{rule_prefixes[i]}"
+
+        # check if rule is active
+        if not any(prefix in active_rules for prefix in rule_prefixes):
+            continue
+
+        # apply regex rule
+        pattern, replacement = rule
+        text = pattern.sub(replacement, text)
+
+    # make lowercase
+    if "lowercase" in active_rules:
+        text = text.lower()
+
+    # word stemming or lemmatization
+    if "stem" in active_rules and "lemmatize" in active_rules:
+        raise ValueError("Cannot use both stemming and lemmatization at the same time.")
+    elif "stem" in active_rules: # stem
+        stemmer = PorterStemmer()
+        text = " ".join(stemmer.stem(word) for word in text.split())
+    elif "lemmatize" in active_rules: # lemmatize
+        lemmatizer = WordNetLemmatizer()
+        text = " ".join(lemmatizer.lemmatize(word) for word in text.split())
+
+    # remove stopwords
+    # if "stopwords" in active_rules:
+    #     if stopwords is None:
+    #         raise ValueError("Stopwords must be provided if stopword removal is enabled.")
+    #     text = " ".join(word for word in text.split() if word not in stopwords)
+
+    return text
+
+
+def apply_preprocessing(
+    sentences: pd.Series,
+    active_rules: set[str],
+):
+    # check if active_rules only contains valid rules
+    if not active_rules.issubset(ALL_RULES):
+        raise ValueError(f"Invalid preprocessing rules: {active_rules - set(ALL_RULES)}")
+
+    # copy the sentences to avoid modifying the original
+    sentences = sentences.copy()
+
+    # remove long sentences
+    if "remove_long_sentences" in active_rules:
+        sentences = sentences[sentences.apply(lambda x: len(x) <= LONG_SENTENCE_THRESHOLD)]
+
+    # apply preprocessing rules on each sentence
+    sentences = sentences.apply(lambda x: preprocess_text(x, active_rules=active_rules))
+
+    return sentences

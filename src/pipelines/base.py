@@ -7,9 +7,15 @@ from omegaconf import DictConfig, ListConfig
 class BasePipeline():
     """Base class for pipelines."""
 
-    def __init__(self, config: DictConfig | ListConfig, device: str | torch.device | None = None):
+    def __init__(
+        self,
+        config: DictConfig | ListConfig,
+        device: str | torch.device | None = None,
+        verbose: bool = True,
+    ):
         self.config = config
         self.device = device
+        self.verbose = verbose
 
     def train(self, train_sentences: pd.Series, train_labels: pd.Series, val_sentences: pd.Series, val_labels: pd.Series) -> tuple[np.ndarray, np.ndarray]:
         """Train the model and make predictions for the training and validation set."""

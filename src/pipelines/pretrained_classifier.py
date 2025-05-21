@@ -36,7 +36,7 @@ class PretrainedClassifier(BasePipeline):
     """Pretrained sentiment classifier."""
 
     def __init__(self, config, device=None, verbose=True):
-        self.config = config
+        super().__init__(config, device=device, verbose=verbose)
 
         # load predictions from embeddings cache
         self.predictions_train = load_embeddings("huggingface", config.model, "predictions_train.csv", load_kwargs={"index_col": 0}, verbose=verbose)
