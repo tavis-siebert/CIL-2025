@@ -116,6 +116,24 @@ def apply_inverse_label_mapping(labels, label_mapping: dict[str, Any]) -> pd.Ser
     return labels
 
 
+def split_indices(indices: pd.Index, condition: pd.Series, p: float = 1) -> tuple[pd.Index, pd.Index]:
+    # filter indices by condition
+    indices_a = indices.intersection(condition.index[condition])
+    indices_b = indices.intersection(condition.index[~condition])
+
+    # compute number of samples per group
+    n_samples_a = len(indices_a) if p == 1 else min(len(indices_a), len(indices_b) * p / (1-p))
+    n_samples_b = len(indices_b) if p == 0 else n_samples_a * (1-p) / p
+    n_samples_a = int(n_samples_a)
+    n_samples_b = int(n_samples_b)
+
+    # sample indices
+    indices_a = pd.Index(indices_a.to_series().sample(n=n_samples_a, random_state=0))
+    indices_b = pd.Index(indices_b.to_series().sample(n=n_samples_b, random_state=1))
+
+    return indices_a, indices_b
+
+
 def evaluate_score(labels, predictions) -> float:
     _check_valid_labels(labels)
     _check_valid_labels(predictions)

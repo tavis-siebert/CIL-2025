@@ -40,6 +40,12 @@ pipeline:
   preprocessing:
     batch_size: 32
 
+    # difficulty_filter:
+    #   path: /home/dayang/dev/workspaces/sentiment-analysis/output/sentiment_model_voting.csv
+    #   score_name: score
+    #   score_threshold: 0.5
+    #   p: 0.5
+
     tokenizer:
       padding: true
       truncation: true

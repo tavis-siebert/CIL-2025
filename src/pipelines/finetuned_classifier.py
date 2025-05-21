@@ -16,7 +16,11 @@ from transformers import (
     TrainingArguments,
 )
 
-from utils import apply_inverse_label_mapping, apply_label_mapping
+from utils import (
+    apply_inverse_label_mapping,
+    apply_label_mapping,
+    split_indices,
+)
 
 from .base import BasePipeline
 
@@ -132,6 +136,34 @@ class FinetunedClassifier(BasePipeline):
         train_dataset = self._prepare_dataset(train_sentences, train_labels, desc="train")
         eval_dataset = self._prepare_dataset(val_sentences, val_labels, desc="val")
 
+        # filter train data
+        if "difficulty_filter" in self.config.preprocessing:
+            # load difficulty scores
+            difficulty_scores = pd.read_csv(self.config.preprocessing.difficulty_filter.path, index_col=0)
+            difficulty_scores = difficulty_scores[self.config.preprocessing.difficulty_filter.score_name]
+
+            # split indices by difficulty
+            train_difficult_idx, train_easy_idx = split_indices(
+                train_sentences.index,
+                difficulty_scores <= self.config.preprocessing.difficulty_filter.score_threshold,
+                p=self.config.preprocessing.difficulty_filter.p,
+            )
+            n_difficult = len(train_difficult_idx)
+            n_easy = len(train_easy_idx)
+
+            # filter samples by difficulty
+            mask = pd.Series(False, index=train_sentences.index)
+            mask[train_difficult_idx] = True
+            mask[train_easy_idx] = True
+            train_indices = np.arange(0, len(train_dataset))[mask]
+            n_total = len(train_dataset)
+            n_filtered = len(train_indices)
+
+            # print filter summary
+            logger.info(f"Filtered train data based on difficulty: {n_filtered:,d} / {n_total:,d} ({100 * n_filtered / n_total:.2f}%), {n_difficult:,d} difficult, {n_easy:,d} easy")
+        else:
+            train_indices = np.arange(0, len(train_dataset))
+
         # train the model
         data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)
         trainer_config = WeightedLossTrainerConfig(
@@ -143,7 +175,7 @@ class FinetunedClassifier(BasePipeline):
             model=self.model,
             args=trainer_config,
             data_collator=data_collator,
-            train_dataset=train_dataset,
+            train_dataset=train_dataset.select(train_indices),
             eval_dataset=eval_dataset,
             compute_metrics=self._compute_metrics,
         )
