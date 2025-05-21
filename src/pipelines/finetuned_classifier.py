@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+import pandas as pd
 import torch
 from datasets import Dataset
 from omegaconf import OmegaConf
@@ -39,14 +40,28 @@ class WeightedLossTrainerConfig(TrainingArguments):
 
 # reference: https://huggingface.co/docs/transformers/trainer
 class WeightedLossTrainer(Trainer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # set class weights
+        self._class_weights = None
+        if self.args.class_weights is not None:
+            if self.args.class_weights == "auto":
+                label_counts = pd.Series(self.train_dataset["label"]).value_counts().sort_index()
+                class_weights = len(self.train_dataset) / (len(label_counts) * label_counts)
+                self._class_weights = list(class_weights)
+            else:
+                self._class_weights = self.args.class_weights
+            logger.info(f"Using class weights: {self._class_weights}")
+
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         labels = inputs.pop("labels")
         # forward pass
         outputs = model(**inputs)
         logits = outputs.get("logits")
         # compute custom loss for 3 labels with different weights
-        if self.args.class_weights is not None:
-            class_weights = torch.tensor(self.args.class_weights, device=model.device)
+        if self._class_weights is not None:
+            class_weights = torch.tensor(self._class_weights, device=model.device)
         else:
             class_weights = None
         loss_fn = nn.CrossEntropyLoss(weight=class_weights)
