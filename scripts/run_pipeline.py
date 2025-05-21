@@ -86,6 +86,8 @@ def main(args):
         logger.info(f"Score (val): {score_val:.05f}")
         logger.info(f"Confusion matrix (train):\n{cm_train}")
         logger.info(f"Confusion matrix (val):\n{cm_val}")
+        if args.report_to is not None:
+            wandb.log({"train_score": score_train, "val_score": score_val})
 
         # load test dataset
         test_dataset = load_data(Path(args.data) / "test.csv")
