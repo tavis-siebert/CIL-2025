@@ -3,6 +3,7 @@ from omegaconf import OmegaConf
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
 from preprocessing import apply_preprocessing
@@ -48,16 +49,24 @@ class ClassicalMLPipeline(BasePipeline):
         # configure model
         config_model = OmegaConf.to_container(config.model)
         self.model_type = config_model.pop("type")
-        if self.model_type == "LogisticRegression":
-            self.model = LogisticRegression(**config_model)
-        elif self.model_type == "RandomForestClassifier":
-            self.model = RandomForestClassifier(**config_model)
-        elif self.model_type == "GradientBoostingClassifier":
-            self.model = GradientBoostingClassifier(**config_model)
-        elif self.model_type == "XGBClassifier":
-            self.model = XGBClassifier(**config_model)
+        if config.label_mapping == "regression":
+            raise ValueError("Regression not supported yet")
+        elif config.label_mapping == "classification":
+            # classification models
+            if self.model_type == "LogisticRegression":
+                self.model = LogisticRegression(**config_model)
+            elif self.model_type == "RandomForestClassifier":
+                self.model = RandomForestClassifier(**config_model)
+            elif self.model_type == "GradientBoostingClassifier":
+                self.model = GradientBoostingClassifier(**config_model)
+            elif self.model_type == "XGBClassifier":
+                self.model = XGBClassifier(**config_model)
+            elif self.model_type == "SVC":
+                self.model = SVC(**config_model)
+            else:
+                raise ValueError(f"Unknown model type: {config_model['type']}")
         else:
-            raise ValueError(f"Unknown model type: {config_model['type']}")
+            raise ValueError(f"Unknown label mapping: {config.label_mapping}")
 
         # configure preprocessing
         self.preprocessing_rules = set(OmegaConf.to_container(config.preprocessing)) if "preprocessing" in config else None
