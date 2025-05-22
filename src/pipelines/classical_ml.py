@@ -1,6 +1,10 @@
 import pandas as pd
 from omegaconf import OmegaConf
-from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.ensemble import (
+    GradientBoostingClassifier,
+    RandomForestClassifier,
+    StackingClassifier,
+)
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
@@ -15,6 +19,49 @@ from utils import (
 )
 
 from .base import BasePipeline
+
+
+def create_model(model_config, label_mapping):
+    model_type = model_config.pop("type")
+
+    if label_mapping == "regression":
+        raise ValueError("Regression not supported yet")
+
+    if label_mapping == "classification":
+        # classification models
+        match model_type:
+            case "LogisticRegression":
+                return LogisticRegression(**model_config)
+            case "RandomForestClassifier":
+                return RandomForestClassifier(**model_config)
+            case "GradientBoostingClassifier":
+                return GradientBoostingClassifier(**model_config)
+            case "XGBClassifier":
+                return XGBClassifier(**model_config)
+            case "SVC":
+                return SVC(**model_config)
+            case "StackingClassifier":
+                if type(model_config["estimators"]) is list:
+                    estimators = [
+                        create_model(estimator_config, label_mapping)
+                        for estimator_config in enumerate(model_config.pop("estimators"))
+                    ]
+                elif type(model_config["estimators"]) is dict:
+                    estimators = [
+                        (name, create_model(estimator_config, label_mapping))
+                        for name, estimator_config in model_config.pop("estimators").items()
+                    ]
+
+                if "final_estimator" in model_config:
+                    final_estimator = create_model(model_config.pop("final_estimator"), label_mapping)
+                else:
+                    final_estimator = None
+
+                return StackingClassifier(estimators, final_estimator=final_estimator, **model_config)
+            case _:
+                raise ValueError(f"Unknown model type '{model_type}' for classification.")
+
+    raise ValueError(f"Unknown label mapping: {label_mapping}")
 
 
 class ClassicalMLPipeline(BasePipeline):
@@ -32,62 +79,54 @@ class ClassicalMLPipeline(BasePipeline):
             raise ValueError(f"Unknown label mapping: {config.label_mapping}")
 
         # configure vectorizer
-        config_vectorizer = OmegaConf.to_container(config.vectorizer)
-        if "ngram_range" in config_vectorizer:
-            config_vectorizer["ngram_range"] = tuple(config_vectorizer["ngram_range"])
-        self.vectorizer_type = config_vectorizer.pop("type")
+        vectorizer_config = OmegaConf.to_container(config.vectorizer)
+        if "ngram_range" in vectorizer_config:
+            vectorizer_config["ngram_range"] = tuple(vectorizer_config["ngram_range"])
+        self.vectorizer_type = vectorizer_config.pop("type")
         if self.vectorizer_type == "CountVectorizer":
-            self.vectorizer = CountVectorizer(**config_vectorizer)
+            self.vectorizer = CountVectorizer(**vectorizer_config)
         elif self.vectorizer_type == "TfidfVectorizer":
-            self.vectorizer = TfidfVectorizer(**config_vectorizer)
+            self.vectorizer = TfidfVectorizer(**vectorizer_config)
         elif self.vectorizer_type == "GloVe":
-            glove_path = config_vectorizer.pop("path")
+            glove_path = vectorizer_config.pop("path")
             self.glove_embeddings = load_glove_embeddings(glove_path)
         else:
-            raise ValueError(f"Unknown vectorizer type: {config_vectorizer['type']}")
+            raise ValueError(f"Unknown vectorizer type: {vectorizer_config['type']}")
 
         # configure model
-        config_model = OmegaConf.to_container(config.model)
-        self.model_type = config_model.pop("type")
-        if config.label_mapping == "regression":
-            raise ValueError("Regression not supported yet")
-        elif config.label_mapping == "classification":
-            # classification models
-            if self.model_type == "LogisticRegression":
-                self.model = LogisticRegression(**config_model)
-            elif self.model_type == "RandomForestClassifier":
-                self.model = RandomForestClassifier(**config_model)
-            elif self.model_type == "GradientBoostingClassifier":
-                self.model = GradientBoostingClassifier(**config_model)
-            elif self.model_type == "XGBClassifier":
-                self.model = XGBClassifier(**config_model)
-            elif self.model_type == "SVC":
-                self.model = SVC(**config_model)
-            else:
-                raise ValueError(f"Unknown model type: {config_model['type']}")
-        else:
-            raise ValueError(f"Unknown label mapping: {config.label_mapping}")
+        model_config = OmegaConf.to_container(config.model)
+        self.model = create_model(model_config, config.label_mapping)
 
         # configure preprocessing
         self.preprocessing_rules = set(OmegaConf.to_container(config.preprocessing)) if "preprocessing" in config else None
 
     def train(self, train_sentences, train_labels, val_sentences, val_labels):
         # apply label mapping
-        train_labels = apply_label_mapping(train_labels, self.label_mapping)
-        val_labels = apply_label_mapping(val_labels, self.label_mapping)
+        if self.label_mapping:
+            train_labels = apply_label_mapping(train_labels, self.label_mapping)
+            val_labels = apply_label_mapping(val_labels, self.label_mapping)
 
         # apply preprocessing for train
         if self.preprocessing_rules:
             train_sentences = apply_preprocessing(train_sentences, self.preprocessing_rules)
 
+        # reduce train set size if specified
+        if "percent_train_samples" in self.config:
+            print(f"Warning: Reducing train set size to {self.config.percent_train_samples * 100}% ({len(train_sentences)} samples)")
+            train_sentences_for_fit = train_sentences[: int(len(train_sentences) * self.config.percent_train_samples)]
+            train_labels_for_fit = train_labels[: int(len(train_sentences) * self.config.percent_train_samples)]
+        else:
+            train_sentences_for_fit = train_sentences
+            train_labels_for_fit = train_labels
+
         # get embeddings for train
         if self.vectorizer_type == "GloVe":
-            train_embeddings = sentences_to_glove_embeddings(train_sentences, self.glove_embeddings)
+            train_embeddings = sentences_to_glove_embeddings(train_sentences_for_fit, self.glove_embeddings)
         else:
-            train_embeddings = self.vectorizer.fit_transform(train_sentences)
+            train_embeddings = self.vectorizer.fit_transform(train_sentences_for_fit)
 
         # train
-        self.model.fit(train_embeddings, train_labels)
+        self.model.fit(train_embeddings, train_labels_for_fit)
 
         # predict
         train_predictions = self.predict(train_sentences)

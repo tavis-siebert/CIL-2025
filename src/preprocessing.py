@@ -6,9 +6,9 @@ from nltk.stem import PorterStemmer, WordNetLemmatizer
 REGEX_RULES = {
     "clean_whitespaces": (re.compile(r"\s{2,}"), " "),
 
-    "internet/replace_urls": (re.compile(r"https?://\S+|www\.\S+"), "url"),
-    "internet/replace_emails": (re.compile(r"\w+@\w+\.\w+"), "email"),
-    "internet/repalce_usernames": (re.compile(r"@\w+"), "username"),
+    "internet/replace_urls": (re.compile(r"https?://\S+|www\.\S+"), "=url="),
+    "internet/replace_emails": (re.compile(r"\w+@\w+\.\w+"), "=email="),
+    "internet/repalce_usernames": (re.compile(r"@\w+"), "=username="),
 
     "punctuation/clean_!!": (re.compile(r"!{3,}"), "!!"),
     "punctuation/clean_??": (re.compile(r"\?{3,}"), "??"),
@@ -24,7 +24,7 @@ REGEX_RULES = {
     "contractions/replace_'t": (re.compile(r"(\w+)'t"), "\1 not"),
 
     "remove_repeated_chars": (re.compile(r"(.)\1{4,}"), "\1\1\1"),
-    "remove_special_chars": (re.compile(r"[^a-zA-Z0-9\!\? ]"), ""),
+    "remove_special_chars": (re.compile(r"[^a-zA-Z0-9\!\?= ]"), ""),
 
     # "@ to at": (re.compile(r" \@ "), " at "),
     # "2 to to": (re.compile(r" 2 "), " to "),
