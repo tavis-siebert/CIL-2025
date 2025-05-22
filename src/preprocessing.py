@@ -63,22 +63,45 @@ ALL_RULES = [
 
     "remove_repeated_chars",
     "remove_special_chars",
+    "remove_stopwords",
 
     "stem",
     "lemmatize",
 
     "lowercase",
-
-    # "stopwords",
 ]
 
 LONG_SENTENCE_THRESHOLD = 512
+
+# collection of common stopwords
+STOPWORDS = {
+    "i", "me", "my", "myself",
+    "we", "our", "ours", "ourselves",
+    "you", "your", "yours", "yourself", "yourselves",
+    "he", "him", "his", "himself",
+    "she", "her", "hers", "herself",
+    "it", "its", "itself",
+    "they", "them", "their", "theirs", "themselves",
+
+    "what", "which", "who", "whom", "when", "where", "why", "how",
+    "this", "that", "these", "those",
+
+    "am", "is", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "having",
+    "do", "does", "did", "doing",
+
+    "a", "an", "the",
+    "and", "or", "if", "because", "as", "until", "while", "of", "at", "by", "for",
+    "with", "about", "against", "between", "into", "through", "during", "before",
+    "after", "above", "below", "to", "from", "up", "down", "in", "on", "over", "further",
+    "then", "once", "here", "there", "both", "each", "more", "most", "some", "such", "own",
+    "so", "can", "will", "just", "don", "should", "now",
+}
 
 
 def preprocess_text(
     text: str,
     active_rules: set[str],
-    # stopwords: set[str]|None = None,
 ):
     # apply regex rules
     for name, rule in REGEX_RULES.items():
@@ -110,10 +133,8 @@ def preprocess_text(
         text = " ".join(lemmatizer.lemmatize(word) for word in text.split())
 
     # remove stopwords
-    # if "stopwords" in active_rules:
-    #     if stopwords is None:
-    #         raise ValueError("Stopwords must be provided if stopword removal is enabled.")
-    #     text = " ".join(word for word in text.split() if word not in stopwords)
+    if "remove_stopwords" in active_rules:
+        text = " ".join(word for word in text.split() if word.lower() not in STOPWORDS)
 
     return text
 

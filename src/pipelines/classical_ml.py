@@ -3,6 +3,7 @@ from omegaconf import OmegaConf
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+from xgboost import XGBClassifier
 
 from preprocessing import apply_preprocessing
 from utils import (
@@ -53,11 +54,13 @@ class ClassicalMLPipeline(BasePipeline):
             self.model = RandomForestClassifier(**config_model)
         elif self.model_type == "GradientBoostingClassifier":
             self.model = GradientBoostingClassifier(**config_model)
+        elif self.model_type == "XGBClassifier":
+            self.model = XGBClassifier(**config_model)
         else:
             raise ValueError(f"Unknown model type: {config_model['type']}")
 
         # configure preprocessing
-        self.preprocessing_rules = set(OmegaConf.to_container(config.preprocessing)) if "preprosessing" in config else None
+        self.preprocessing_rules = set(OmegaConf.to_container(config.preprocessing)) if "preprocessing" in config else None
 
     def train(self, train_sentences, train_labels, val_sentences, val_labels):
         # apply label mapping
