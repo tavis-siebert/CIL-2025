@@ -35,6 +35,16 @@ pipeline:
   #   lora_alpha: 64
   #   lora_dropout: 0.05
   #   bias: none
+  #   target_modules: # RobertaModel
+  #     - query # default
+  #     - value # default
+  #     # - key
+  #     # - attention.output.dense
+  #     # - intermediate.dense
+  #     # - output.dense
+  #     # - classifier.dense
+  #     # - classifier.out_proj
+  #     # - word_embeddings
   #   task_type: SEQ_CLS
 
   preprocessing:

@@ -103,8 +103,9 @@ class FinetunedClassifier(BasePipeline):
             logger.info(f"Froze parameters of modules: {self.config.freeze}")
         elif "peft" in self.config:
             # add PEFT adapter to model
-            model = get_peft_model(model, LoraConfig(**self.config.peft))
-            logger.info(f"Using PEFT adapter: {self.config.peft}")
+            peft_config = OmegaConf.to_container(self.config.peft)
+            model = get_peft_model(model, LoraConfig(**peft_config))
+            logger.info(f"Using PEFT adapter: {peft_config}")
 
         # print model summary
         if isinstance(model, PeftModel):
