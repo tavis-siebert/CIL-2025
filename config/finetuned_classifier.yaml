@@ -54,7 +54,7 @@ pipeline:
     #   path: /home/dayang/dev/workspaces/sentiment-analysis/output/sentiment_model_voting.csv
     #   score_name: score
     #   score_threshold: 0.5
-    #   p: 0.5
+    #   p: 0.25
 
     tokenizer:
       padding: true
@@ -65,13 +65,16 @@ pipeline:
     seed: ${seed}
 
     # objective parameters
-    class_weights: auto
+    # class_weights: auto # original: [1.553279, 0.692446, 1.096438]
+    class_weights: [1.553279, 1.038669, 1.096438] # original * [1, 1.5, 1]
+    weight_decay: 0.01
 
     # training parameters
-    per_device_train_batch_size: 16
-    gradient_accumulation_steps: 2
     num_train_epochs: 2
-    learning_rate: 1e-6
+    per_device_train_batch_size: 16
+    gradient_accumulation_steps: 1
+
+    learning_rate: 1e-5
     lr_scheduler_type: constant
 
     # eval parameters
@@ -86,6 +89,6 @@ pipeline:
     # checkpointing parameters
     save_strategy: steps
     save_steps: 0.1
-    save_total_limit: 2
+    save_total_limit: 1
     load_best_model_at_end: true
     metric_for_best_model: eval_score
