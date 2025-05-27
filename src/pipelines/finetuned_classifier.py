@@ -88,7 +88,10 @@ class FinetunedClassifier(BasePipeline):
             tokenizer.pad_token = tokenizer.eos_token
 
         model = AutoModelForSequenceClassification.from_pretrained(
-            **self.config.model, label2id=label2id, id2label=id2label
+            **self.config.model,
+            label2id=label2id,
+            id2label=id2label,
+            ignore_mismatched_sizes=True,  # allows to load models with different head size
         )
         model = model.to(self.device)
         logger.info(f"Loaded model: {self.config.model.pretrained_model_name_or_path}\n{model}")
@@ -161,7 +164,11 @@ class FinetunedClassifier(BasePipeline):
             n_filtered = len(train_indices)
 
             # print filter summary
-            logger.info(f"Filtered train data based on difficulty: {n_filtered:,d} / {n_total:,d} ({100 * n_filtered / n_total:.2f}%), {n_difficult:,d} difficult, {n_easy:,d} easy")
+            logger.info(
+                f"Filtered train data based on difficulty: "
+                f"{n_filtered:,d} / {n_total:,d} ({100 * n_filtered / n_total:.2f}%), "
+                f"{n_difficult:,d} difficult, {n_easy:,d} easy"
+            )
         else:
             train_indices = np.arange(0, len(train_dataset))
 
