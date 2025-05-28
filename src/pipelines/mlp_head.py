@@ -17,7 +17,9 @@ class MLPHeadModel(BasePipeline):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        embeds_file = f"embeddings_{self.config.embed_type}.npz"
+        embeds_file = "embeddings.npz"
+        if self.config.embed_pipeline == "huggingface":
+            embeds_file = f"embeddings_{self.config.embed_type}.npz"
         self.embeddings = load_embeddings(self.config.embed_pipeline, self.config.embed_model, embeds_file)
 
         # model
