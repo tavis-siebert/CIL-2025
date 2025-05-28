@@ -2,8 +2,9 @@ import string
 
 import pandas as pd
 
-from cache import load_embeddings
+from omegaconf import DictConfig, ListConfig
 
+from cache import load_embeddings
 from .base import BasePipeline
 
 
@@ -60,8 +61,15 @@ def map_to_labels(predictions, model_name):
 
 class PretrainedClassifier(BasePipeline):
     """Pretrained sentiment classifier."""
-
-    def __init__(self, config, device=None):
+    def __init__(
+        self,
+        config: DictConfig | ListConfig,
+        device: str | torch.device | None = None,
+        output_dir: str = "output",
+        debug: bool = False,
+        verbose: bool = True,
+        **kwargs,
+    ):
         super().__init__(config, device=device)
 
         # load predictions from embeddings cache

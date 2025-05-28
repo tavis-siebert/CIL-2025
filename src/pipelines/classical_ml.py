@@ -1,5 +1,5 @@
 import pandas as pd
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, DictConfig, ListConfig
 from sklearn.ensemble import (
     GradientBoostingClassifier,
     RandomForestClassifier,
@@ -67,8 +67,16 @@ def create_model(model_config, label_mapping):
 class ClassicalMLPipeline(BasePipeline):
     """Classical machine learning pipeline for text classification."""
 
-    def __init__(self, config, device=None, verbose=True):
-        super().__init__(config, device=device, verbose=verbose)
+    def __init__(
+        self,
+        config: DictConfig | ListConfig,
+        device=None,
+        output_dir: str = "output",
+        debug: bool = False,
+        verbose: bool = True,
+        **kwargs
+    ):
+        super().__init__(config, verbose=verbose)
 
         # configure label mapping
         if config.label_mapping == "regression":

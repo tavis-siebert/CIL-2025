@@ -1,7 +1,15 @@
 import re
-
+import nltk
 import pandas as pd
 from nltk.stem import PorterStemmer, WordNetLemmatizer
+
+# Downlod WordNet if needed
+try:
+    nltk.data.find('corpora/wordnet')
+    print("WordNet is already downloaded.")
+except LookupError:
+    print("WordNet not found. Downloading...")
+    nltk.download('wordnet')
 
 REGEX_RULES = {
     "clean_whitespaces": (re.compile(r"\s{2,}"), " "),

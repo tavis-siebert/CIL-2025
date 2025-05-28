@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import pandas as pd
 from tqdm import tqdm
+from omegaconf import DictConfig, ListConfig
 
 from cache import load_embeddings
 from utils import apply_label_mapping, apply_inverse_label_mapping
@@ -13,8 +14,12 @@ class MLPHeadModel(BasePipeline):
     """
     def __init__(
         self,
-        config,
-        device
+        config: DictConfig | ListConfig,
+        device: str | torch.device | None = None,
+        output_dir: str = "output",
+        debug: bool = False,
+        verbose: bool = True,
+        **kwargs
     ):
         super().__init__(config, device)  # initialize self.config, self.device
         

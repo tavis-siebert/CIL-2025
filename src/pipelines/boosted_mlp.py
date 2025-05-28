@@ -58,8 +58,12 @@ class MLP(nn.Module):
 class BoostedMLPHeadModel(BasePipeline):
     def __init__(
         self, 
-        config: DictConfig | ListConfig, 
-        device: str | torch.device | None = 'cpu'
+        config: DictConfig | ListConfig,
+        device: str | torch.device | None = None,
+        output_dir: str = "output",
+        debug: bool = False,
+        verbose: bool = True,
+        **kwargs,
     ): 
         super().__init__(config, device)
 

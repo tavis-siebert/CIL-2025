@@ -54,7 +54,7 @@ def main(args):
 
         # load pipeline
         pipeline = load_pipeline(config.pipeline, device=device, output_dir=args.out, debug=args.debug)
-        
+
         if "classical_ml" in config.pipeline.name:
             logger.info(f"Loaded pipeline: {config.pipeline.name} | {config.pipeline.model.type}")
         else:
