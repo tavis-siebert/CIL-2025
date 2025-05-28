@@ -1,4 +1,31 @@
-# CIL-2025 Sentiment Analysis
+# CIL 2025 - Sentiment Analysis
+
+This repository contains our code for the CIL 2025 course project on sentiment analysis. The goal of this project is to implement and evaluate various machine learning pipelines for sentiment classification on a given dataset.
+
+## Setup
+We use `Python 3.12.3` with the following dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+## Run a pipeline
+To run a pipeline, use the command
+```bash
+python scripts/run_pipeline.py --config config/<config_file>.yaml
+```
+
+We have implemented the following pipelines
+- `classical_ml_bow_*.yaml`: bag-of-words embeddings + classical machine learning models (e.g., logistic regression, random forest, SVM, XGBoost)
+- `mlp_head.yaml`: TODO
+- `boosted_mlp_head.yaml`: TODO
+- `pretrained_classifier.yaml`: pretrained language models (inference-only)
+
+To reproduce our final submission with a train score of TODO and validation score of TODO, run
+```bash
+python scripts/run_pipeline.py --config config/TODO.yaml
+```
+
+---
 
 ## Setup (dev)
 If you plan to develop in this repository, run
@@ -15,12 +42,6 @@ To contribute to this repository, please work on a branch named `<name>/<descrip
 To add new pipelines, create the following two files
 * `config/<config_file>.yaml`: The configuration file with the module name of the pipeline and all hyperparameters.
 * `src/pipelines/<module_file>.py`: The module file with the pipeline definition.
-
-## Run a pipeline
-To run a pipeline, use the command
-```bash
-python scripts/run_pipeline.py --config config/<config_file>.yaml
-```
 
 ## Use the cache
 To save intermediate outputs of expensive function calls to the cache, you can use the `CACHE` object provided by the `cache.py` module. To specifically save and load embeddings from the cache, you can use the `save_embeddings` and `load_embeddings` wrappers around the `CACHE` object.

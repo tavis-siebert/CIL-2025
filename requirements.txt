@@ -2,6 +2,7 @@ numpy
 pandas
 matplotlib
 omegaconf
+wandb
 
 scikit-learn
 transformers
