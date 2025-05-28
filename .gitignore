@@ -3,3 +3,6 @@ __pycache__/
 output/
 *.out
 wandb/
+
+.DS_Store
+data/glove*

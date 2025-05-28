@@ -133,3 +133,29 @@ def save_predictions(path: str | Path, ids, predictions):
     submission = pd.DataFrame({"id": ids, "label": predictions})
     submission.to_csv(path, index=False)
     logger.info(f"Submission saved to '{path}'.")
+
+
+def load_glove_embeddings(glove_file_path):
+    embeddings_index = {}
+    with open(glove_file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            values = line.split()
+            word = values[0]
+            coefs = np.asarray(values[1:], dtype="float32")
+            embeddings_index[word] = coefs
+    return embeddings_index
+
+def sentences_to_glove_embeddings(sentences, glove_embeddings):
+    dim = len(glove_embeddings[next(iter(glove_embeddings))])
+    all_embeddings = []
+    for sentence in sentences:
+        words = sentence.split()
+        embeddings = np.zeros((len(words), dim))
+        for i, word in enumerate(words):
+            if word in glove_embeddings:
+                embeddings[i] = glove_embeddings[word]
+            else:
+                embeddings[i] = np.zeros(dim)
+        all_embeddings.append(embeddings.mean(axis=0) if len(words) > 0 else np.zeros(dim))
+
+    return pd.DataFrame(all_embeddings)

@@ -54,7 +54,11 @@ def main(args):
 
         # load pipeline
         pipeline = load_pipeline(config.pipeline, device=device, output_dir=args.out, debug=args.debug)
-        logger.info(f"Loaded pipeline: {config.pipeline.name}")
+        
+        if "classical_ml" in config.pipeline.name:
+            logger.info(f"Loaded pipeline: {config.pipeline.name} | {config.pipeline.model.type}")
+        else:
+            logger.info(f"Loaded pipeline: {config.pipeline.name}")
 
         # load train dataset and create splits
         train_dataset = load_data(Path(args.data) / "training.csv")
