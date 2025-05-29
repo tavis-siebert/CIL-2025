@@ -100,6 +100,7 @@ class ClassicalMLPipeline(BasePipeline):
         # configure model
         model_config = OmegaConf.to_container(self.config.model)
         self.model = create_model(model_config, self.config.label_mapping)
+        logger.info(f"Loaded model: {self.config.model.type}")
 
         # configure preprocessing
         self.preprocessing_rules = (
