@@ -131,7 +131,7 @@ def preprocess_text(
 
         # check if rule is active
         if not any(prefix in active_rules for prefix in rule_prefixes):
-            print(f"Skipping inactive rule: {name}")
+            logger.info(f"Skipping inactive rule: {name}")
             continue
 
         # apply regex rule
@@ -193,7 +193,7 @@ def apply_preprocessing(
     if print_stats:
         for name in sorted(stats.keys()):
             if stat:=stats[name]:
-                print(f"Preprocessing rule '{name}' applied {stat} ({100*stat/len(sentences):.02f}\%).")
+                logger.info(f"Preprocessing rule '{name}' applied {stat} ({100*stat/len(sentences):.02f}\%).")
 
     logger.info(f"Applied preprocessing rules: {active_rules}")
     return sentences

@@ -48,22 +48,32 @@ def create_model(model_config, label_mapping):
                 if type(model_config["estimators"]) is list:
                     estimators = [
                         create_model(estimator_config, label_mapping)
-                        for estimator_config in enumerate(model_config.pop("estimators"))
+                        for estimator_config in enumerate(
+                            model_config.pop("estimators")
+                        )
                     ]
                 elif type(model_config["estimators"]) is dict:
                     estimators = [
                         (name, create_model(estimator_config, label_mapping))
-                        for name, estimator_config in model_config.pop("estimators").items()
+                        for name, estimator_config in model_config.pop(
+                            "estimators"
+                        ).items()
                     ]
 
                 if "final_estimator" in model_config:
-                    final_estimator = create_model(model_config.pop("final_estimator"), label_mapping)
+                    final_estimator = create_model(
+                        model_config.pop("final_estimator"), label_mapping
+                    )
                 else:
                     final_estimator = None
 
-                return StackingClassifier(estimators, final_estimator=final_estimator, **model_config)
+                return StackingClassifier(
+                    estimators, final_estimator=final_estimator, **model_config
+                )
             case _:
-                raise ValueError(f"Unknown model type '{model_type}' for classification.")
+                raise ValueError(
+                    f"Unknown model type '{model_type}' for classification."
+                )
 
     raise ValueError(f"Unknown label mapping: {label_mapping}")
 
@@ -104,7 +114,9 @@ class ClassicalMLPipeline(BasePipeline):
 
         # configure preprocessing
         self.preprocessing_rules = (
-            set(OmegaConf.to_container(self.config.preprocessing)) if "preprocessing" in self.config else None
+            set(OmegaConf.to_container(self.config.preprocessing))
+            if "preprocessing" in self.config
+            else None
         )
 
     def train(self, train_sentences, train_labels, val_sentences, val_labels, **kwargs):
@@ -115,22 +127,30 @@ class ClassicalMLPipeline(BasePipeline):
 
         # apply preprocessing for train
         if self.preprocessing_rules:
-            train_sentences_for_fit = apply_preprocessing(train_sentences, self.preprocessing_rules)
+            train_sentences_for_fit = apply_preprocessing(
+                train_sentences, self.preprocessing_rules
+            )
 
         # reduce train set size if specified
         if "percent_train_samples" in self.config:
             logger.warning(
                 f"Warning: Reducing train set size to {self.config.percent_train_samples * 100}% ({len(train_sentences)} samples)"
             )
-            train_sentences_for_fit = train_sentences[: int(len(train_sentences) * self.config.percent_train_samples)]
-            train_labels_for_fit = train_labels[: int(len(train_sentences) * self.config.percent_train_samples)]
+            train_sentences_for_fit = train_sentences[
+                : int(len(train_sentences) * self.config.percent_train_samples)
+            ]
+            train_labels_for_fit = train_labels[
+                : int(len(train_sentences) * self.config.percent_train_samples)
+            ]
         else:
             train_sentences_for_fit = train_sentences_for_fit
             train_labels_for_fit = train_labels
 
         # get embeddings for train
         if self.vectorizer_type == "GloVe":
-            train_embeddings = sentences_to_glove_embeddings(train_sentences_for_fit, self.glove_embeddings)
+            train_embeddings = sentences_to_glove_embeddings(
+                train_sentences_for_fit, self.glove_embeddings
+            )
         else:
             train_embeddings = self.vectorizer.fit_transform(train_sentences_for_fit)
 
