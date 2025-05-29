@@ -6,12 +6,14 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from tqdm import tqdm
 from omegaconf import DictConfig, ListConfig
+from tqdm import tqdm
 
-from utils import apply_label_mapping, apply_inverse_label_mapping
-from .base import BasePipeline
 from cache import load_embeddings
+from utils import apply_inverse_label_mapping, apply_label_mapping
+
+from .base import BasePipeline
+
 
 class MLP(nn.Module):
     def __init__(
@@ -22,13 +24,13 @@ class MLP(nn.Module):
     ):
         """
         A simple feed-forward MLP.
-        
+
         Args:
           hidden_sizes:  list/tuple of hidden layer sizes.
           dropout_p:     dropout probability.
           mode:          'regression' or 'classification'.
         """
-        super().__init__() 
+        super().__init__()
 
         layers = []
 
@@ -57,14 +59,14 @@ class MLP(nn.Module):
 
 class BoostedMLPHeadModel(BasePipeline):
     def __init__(
-        self, 
+        self,
         config: DictConfig | ListConfig,
         device: str | torch.device | None = None,
         output_dir: str = "output",
         debug: bool = False,
         verbose: bool = True,
         **kwargs,
-    ): 
+    ):
         super().__init__(config, device)
 
         embeds_file = f"embeddings_{self.config.embed_type}.npz"
@@ -76,7 +78,7 @@ class BoostedMLPHeadModel(BasePipeline):
         else:
             self.label_mapping = {"negative": 0, "neutral": 1, "positive": 2}
 
-        # training and model 
+        # training and model
         self.boost_rate = self.config.boost_rate
         self.epochs = self.config.num_epochs
         self.batch_size = self.config.batch_size
@@ -84,7 +86,7 @@ class BoostedMLPHeadModel(BasePipeline):
         self.learners = nn.ModuleList(
             [MLP(self.config.hidden_sizes, self.config.dropout_p, self.mode) for _ in range(self.config.n_learners)]
         )
-    
+
     def fit(self, X: torch.Tensor, y: torch.Tensor):
         # initialize the residuals to just the labels (subseqhent iterations make F_pred != 0)
         N = X.size(0)
@@ -126,10 +128,10 @@ class BoostedMLPHeadModel(BasePipeline):
                 F_pred += self.boost_rate * h_i(X)
 
     def train(
-        self, 
-        train_sentences: pd.Series, 
-        train_labels: pd.Series, 
-        val_sentences: pd.Series, 
+        self,
+        train_sentences: pd.Series,
+        train_labels: pd.Series,
+        val_sentences: pd.Series,
         val_labels: pd.Series
     ):
         embeddings = self.embeddings['train_embeddings']
@@ -148,7 +150,7 @@ class BoostedMLPHeadModel(BasePipeline):
         val_predictions   = self.preds_to_series(self.pred_tensor(val_embeddings), val_sentences.index)
 
         return train_predictions, val_predictions
-    
+
     @torch.no_grad()
     def pred_tensor(self, embeds: torch.Tensor):
         F_pred = None
@@ -163,7 +165,7 @@ class BoostedMLPHeadModel(BasePipeline):
         if self.mode == 'regression':
             return F_pred.squeeze().detach().cpu().numpy()
         return F_pred.argmax(dim=1).detach().cpu().numpy()
-    
+
     def preds_to_series(self, preds, index):
         preds = pd.Series(preds, index=index)
         if self.mode == 'regression':

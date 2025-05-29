@@ -1,16 +1,18 @@
+import pandas as pd
 import torch
 import torch.nn as nn
-import pandas as pd
-from tqdm import tqdm
 from omegaconf import DictConfig, ListConfig
+from tqdm import tqdm
 
 from cache import load_embeddings
-from utils import apply_label_mapping, apply_inverse_label_mapping
+from utils import apply_inverse_label_mapping, apply_label_mapping
+
 from .base import BasePipeline
+
 
 class MLPHeadModel(BasePipeline):
     """
-    Implements a linear head over 
+    Implements a linear head over
     """
     def __init__(
         self,
@@ -22,7 +24,7 @@ class MLPHeadModel(BasePipeline):
         **kwargs
     ):
         super().__init__(config, device)  # initialize self.config, self.device
-        
+
         embeds_file = f"embeddings_{self.config.embed_type}.npz"
         self.embeddings = load_embeddings(self.config.embed_pipeline, self.config.embed_model, embeds_file)
 
@@ -42,7 +44,7 @@ class MLPHeadModel(BasePipeline):
             nn.Dropout(0.3),
             nn.Linear(256, out_size)
         ).to(self.device)
-    
+
 
     def train(self, train_sentences, train_labels, val_sentences, val_labels):
 
@@ -78,7 +80,7 @@ class MLPHeadModel(BasePipeline):
 
         train_predictions = self.preds_to_series(self.predict_tensor(train_embeddings), train_sentences.index)
         val_predictions   = self.preds_to_series(self.predict_tensor(val_embeddings), val_sentences.index)
-            
+
         return train_predictions, val_predictions
 
     def preds_to_series(self, preds, index):
