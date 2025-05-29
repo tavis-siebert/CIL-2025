@@ -136,7 +136,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--out",
         type=Path,
-        default="output/submissions",
+        default="output",
         help="The path to the output folder containing the submission file. (default: output/submissions)",
     )
     parser.add_argument(
