@@ -1,7 +1,11 @@
+import logging
 import re
+
 import nltk
 import pandas as pd
 from nltk.stem import PorterStemmer, WordNetLemmatizer
+
+logger = logging.getLogger(__name__)
 
 # Downlod WordNet if needed
 try:
@@ -79,8 +83,6 @@ ALL_RULES = [
     "lowercase",
 ]
 
-LONG_SENTENCE_THRESHOLD = 512
-
 # collection of common stopwords
 STOPWORDS = {
     "i", "me", "my", "myself",
@@ -149,8 +151,10 @@ def preprocess_text(
 
 def apply_preprocessing(
     sentences: pd.Series,
-    active_rules: set[str],
+    active_rules: set[str] | list,
 ):
+    active_rules = set(active_rules)
+
     # check if active_rules only contains valid rules
     if not active_rules.issubset(ALL_RULES):
         raise ValueError(f"Invalid preprocessing rules: {active_rules - set(ALL_RULES)}")
@@ -161,4 +165,5 @@ def apply_preprocessing(
     # apply preprocessing rules on each sentence
     sentences = sentences.apply(lambda x: preprocess_text(x, active_rules=active_rules))
 
+    logger.info(f"Applied preprocessing rules: {active_rules}")
     return sentences
