@@ -1,7 +1,6 @@
 import pandas as pd
 import torch
 import torch.nn as nn
-from omegaconf import DictConfig, ListConfig
 from tqdm import tqdm
 
 from cache import load_embeddings
@@ -15,29 +14,21 @@ class MLPHeadModel(BasePipeline):
     Implements a linear head over
     """
 
-    def __init__(
-        self,
-        config: DictConfig | ListConfig,
-        device: str | torch.device | None = None,
-        output_dir: str = "output",
-        debug: bool = False,
-        verbose: bool = True,
-        **kwargs,
-    ):
-        super().__init__(config, device)  # initialize self.config, self.device
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         embeds_file = f"embeddings_{self.config.embed_type}.npz"
         self.embeddings = load_embeddings(self.config.embed_pipeline, self.config.embed_model, embeds_file)
 
         # model
-        if config.mode == "regression":
+        if self.config.mode == "regression":
             self.label_mapping = {"negative": -1, "neutral": 0, "positive": 1}
             out_size = 1
-        elif config.mode == "classification":
+        elif self.config.mode == "classification":
             self.label_mapping = {"negative": 0, "neutral": 1, "positive": 2}
             out_size = 3
         else:
-            raise ValueError(f"Unknown label mapping: {config.mode}")
+            raise ValueError(f"Unknown label mapping: {self.config.mode}")
 
         self.classifier = nn.Sequential(nn.LazyLinear(256), nn.ReLU(), nn.Dropout(0.3), nn.Linear(256, out_size)).to(
             self.device

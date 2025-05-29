@@ -7,7 +7,6 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from omegaconf import DictConfig, ListConfig
 from tqdm import tqdm
 
 from cache import load_embeddings
@@ -59,16 +58,8 @@ class MLP(nn.Module):
 
 
 class BoostedMLPHeadModel(BasePipeline):
-    def __init__(
-        self,
-        config: DictConfig | ListConfig,
-        device: str | torch.device | None = None,
-        output_dir: str = "output",
-        debug: bool = False,
-        verbose: bool = True,
-        **kwargs,
-    ):
-        super().__init__(config, device)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         embeds_file = f"embeddings_{self.config.embed_type}.npz"
         self.embeddings = load_embeddings(self.config.embed_pipeline, self.config.embed_model, embeds_file)

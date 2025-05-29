@@ -1,5 +1,5 @@
 import pandas as pd
-from omegaconf import DictConfig, ListConfig, OmegaConf
+from omegaconf import OmegaConf
 from sklearn.ensemble import (
     GradientBoostingClassifier,
     RandomForestClassifier,
@@ -67,27 +67,19 @@ def create_model(model_config, label_mapping):
 class ClassicalMLPipeline(BasePipeline):
     """Classical machine learning pipeline for text classification."""
 
-    def __init__(
-        self,
-        config: DictConfig | ListConfig,
-        device=None,
-        output_dir: str = "output",
-        debug: bool = False,
-        verbose: bool = True,
-        **kwargs,
-    ):
-        super().__init__(config, verbose=verbose)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         # configure label mapping
-        if config.label_mapping == "regression":
+        if self.config.label_mapping == "regression":
             self.label_mapping = {"negative": -1, "neutral": 0, "positive": 1}
-        elif config.label_mapping == "classification":
+        elif self.config.label_mapping == "classification":
             self.label_mapping = {"negative": 0, "neutral": 1, "positive": 2}
         else:
-            raise ValueError(f"Unknown label mapping: {config.label_mapping}")
+            raise ValueError(f"Unknown label mapping: {self.config.label_mapping}")
 
         # configure vectorizer
-        vectorizer_config = OmegaConf.to_container(config.vectorizer)
+        vectorizer_config = OmegaConf.to_container(self.config.vectorizer)
         if "ngram_range" in vectorizer_config:
             vectorizer_config["ngram_range"] = tuple(vectorizer_config["ngram_range"])
         self.vectorizer_type = vectorizer_config.pop("type")
@@ -102,12 +94,12 @@ class ClassicalMLPipeline(BasePipeline):
             raise ValueError(f"Unknown vectorizer type: {vectorizer_config['type']}")
 
         # configure model
-        model_config = OmegaConf.to_container(config.model)
-        self.model = create_model(model_config, config.label_mapping)
+        model_config = OmegaConf.to_container(self.config.model)
+        self.model = create_model(model_config, self.config.label_mapping)
 
         # configure preprocessing
         self.preprocessing_rules = (
-            set(OmegaConf.to_container(config.preprocessing)) if "preprocessing" in config else None
+            set(OmegaConf.to_container(self.config.preprocessing)) if "preprocessing" in self.config else None
         )
 
     def train(self, train_sentences, train_labels, val_sentences, val_labels, **kwargs):

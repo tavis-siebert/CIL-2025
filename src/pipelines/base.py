@@ -13,14 +13,11 @@ class BasePipeline:
         device: str | torch.device | None = None,
         output_dir: str = "output",
         debug: bool = False,
-        verbose: bool = True,
-        **kwargs,
     ):
         self.config = config
         self.device = device
         self.output_dir = output_dir
         self.debug = debug
-        self.verbose = verbose
 
     def train(
         self,
