@@ -3,12 +3,12 @@ val_split_size: 0.1
 deterministic: true
 
 pipeline:
-  name: boosted_mlp.BoostedMLPHeadModel
+  name: boosted_mlp_head.BoostedMLPHeadModel
 
   # embeddings
   embed_type: mean
   embed_pipeline: huggingface
-  embed_model: microsoft/deberta-v3-base 
+  embed_model: microsoft/deberta-v3-base
 
   # model params
   n_learners: 8
