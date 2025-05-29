@@ -12,7 +12,11 @@ pipeline:
     positive: 2
 
   model:
-    pretrained_model_name_or_path: cardiffnlp/twitter-roberta-base-sentiment-latest
+    # pretrained_model_name_or_path: cardiffnlp/twitter-roberta-base-sentiment-latest
+    # pretrained_model_name_or_path: tabularisai/multilingual-sentiment-analysis
+    # pretrained_model_name_or_path: siebert/sentiment-roberta-large-english
+    pretrained_model_name_or_path: FacebookAI/roberta-large
+
     num_labels: 3
 
   # freeze:
@@ -38,10 +42,10 @@ pipeline:
   #   target_modules: # RobertaModel
   #     - query # default
   #     - value # default
-  #     # - key
-  #     # - attention.output.dense
-  #     # - intermediate.dense
-  #     # - output.dense
+  #     - key
+  #     - attention.output.dense
+  #     - intermediate.dense
+  #     - output.dense
   #     # - classifier.dense
   #     # - classifier.out_proj
   #     # - word_embeddings
@@ -60,7 +64,7 @@ pipeline:
     #   path: data/sentiment_model_voting.csv
     #   score_name: score
     #   score_threshold: 0.5
-    #   p: 0.33
+    #   p: 0.25
 
     tokenizer:
       padding: true
@@ -77,8 +81,8 @@ pipeline:
 
     # training parameters
     num_train_epochs: 2
-    per_device_train_batch_size: 16
-    gradient_accumulation_steps: 1
+    per_device_train_batch_size: 4
+    gradient_accumulation_steps: 4
 
     learning_rate: 1e-5
     lr_scheduler_type: constant
@@ -94,7 +98,7 @@ pipeline:
 
     # checkpointing parameters
     save_strategy: steps
-    save_steps: 0.1
-    save_total_limit: 1
+    save_steps: 0.02
+    save_total_limit: 2
     load_best_model_at_end: true
     metric_for_best_model: eval_score
