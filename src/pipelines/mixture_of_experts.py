@@ -34,10 +34,7 @@ class MoE(nn.Module):
             total_fusion_input_dim += expert.processor_output_dim
 
         self.gate = nn.Sequential(
-            nn.Linear(total_fusion_input_dim, 256),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(256, len(expert_configs))
+            nn.Linear(total_fusion_input_dim, 256), nn.ReLU(), nn.Dropout(0.3), nn.Linear(256, len(expert_configs))
         )
         # uniform init
         for module in self.gate:
@@ -63,7 +60,7 @@ class MoE(nn.Module):
             nn.Linear(256, out_size),
         )
 
-    def forward(self, expert_inputs, temp=1.0): # temp left if someone wants to play w/ it in the future
+    def forward(self, expert_inputs, temp=1.0):  # temp left if someone wants to play w/ it in the future
         # NOTE: refactor the commented lines if you want to use the original architecture,
         # but it feels weird to use raw-embeddings if they're not in the same feature space (i.e. pre-processor())
         # ---------------------
@@ -75,26 +72,23 @@ class MoE(nn.Module):
 
         # gate_input = torch.cat(gate_inputs, dim=1)
         # expert_weights = self.gate(gate_input)
-        expert_weights = torch.softmax(
-            self.gate(torch.cat(processor_outputs, dim=1)) / temp,
-            dim=1
-        )
+        expert_weights = torch.softmax(self.gate(torch.cat(processor_outputs, dim=1)) / temp, dim=1)
 
         weighted_expert_outputs = []
         for i, name in enumerate(expert_inputs):
-            weighted_expert_outputs.append(
-                processor_outputs[i] * expert_weights[:, i].unsqueeze(1)
-            )
+            weighted_expert_outputs.append(processor_outputs[i] * expert_weights[:, i].unsqueeze(1))
 
         fusion_input = torch.cat(weighted_expert_outputs, dim=1)
         logits = self.fusion(fusion_input)
 
         return logits, expert_weights
 
+
 class MoEModel(BasePipeline):
     """
     Pipeline wrapping a Dynamic Mixture-of-Experts model for sentiment analysis.
     """
+
     def __init__(
         self,
         config: DictConfig | ListConfig,
@@ -113,7 +107,7 @@ class MoEModel(BasePipeline):
             self.expert_names.append(name)
             # save embeds for each expert
             embed_pipeline = expert.embed_pipeline
-            embed_file = f'embeddings_{expert.embed_type}.npz' if embed_pipeline == 'huggingface' else 'embeddings.npz'
+            embed_file = f"embeddings_{expert.embed_type}.npz" if embed_pipeline == "huggingface" else "embeddings.npz"
             self.expert_embeddings[name] = load_embeddings(embed_pipeline, name, embed_file)
 
         # Label mappings
@@ -143,25 +137,28 @@ class MoEModel(BasePipeline):
         train_labels: pd.Series,
         val_sentences: pd.Series,
         val_labels: pd.Series,
-        **kwargs
+        **kwargs,
     ) -> tuple[np.ndarray, np.ndarray]:
-
         # Prepare embeddings for each expert
         train_embeddings, val_embeddings = {}, {}
         for name, embeds in self.expert_embeddings.items():
-            train_embeddings[name] = torch.from_numpy(embeds['train_embeddings'][train_sentences.index]).float().to(self.device)
-            val_embeddings[name] = torch.from_numpy(embeds['train_embeddings'][val_sentences.index]).float().to(self.device)
+            train_embeddings[name] = (
+                torch.from_numpy(embeds["train_embeddings"][train_sentences.index]).float().to(self.device)
+            )
+            val_embeddings[name] = (
+                torch.from_numpy(embeds["train_embeddings"][val_sentences.index]).float().to(self.device)
+            )
 
         # Encode labels
         train_labels = apply_label_mapping(train_labels, self.label_mapping)
         val_labels = apply_label_mapping(val_labels, self.label_mapping)
-        if self.config.mode == 'classification':
+        if self.config.mode == "classification":
             train_labels = torch.from_numpy(train_labels.values).long().to(self.device)
-            val_labels   = torch.from_numpy(val_labels.values).long().to(self.device)
+            val_labels = torch.from_numpy(val_labels.values).long().to(self.device)
             criterion = nn.CrossEntropyLoss()
         else:
             train_labels = torch.from_numpy(train_labels.values).float().unsqueeze(1).to(self.device)
-            val_labels   = torch.from_numpy(val_labels.values).float().unsqueeze(1).to(self.device)
+            val_labels = torch.from_numpy(val_labels.values).float().unsqueeze(1).to(self.device)
             criterion = nn.L1Loss()
 
         # Build DataLoaders
@@ -173,7 +170,7 @@ class MoEModel(BasePipeline):
 
         # Optimizer, scheduler
         optimizer = AdamW(self.MoE.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-        scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=2)
+        scheduler = ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=2)
 
         best_score = 0.0
         patience_counter = 0
@@ -188,20 +185,20 @@ class MoEModel(BasePipeline):
             train_loss = 0.0
             expert_weights_sum_train = torch.zeros(len(self.expert_names)).to(self.device)
 
-            for batch in tqdm(train_loader, desc=f"Epoch {epoch+1}"):
+            for batch in tqdm(train_loader, desc=f"Epoch {epoch + 1}"):
                 *expert_tensors, labels = batch
                 expert_inputs = {name: tensor for name, tensor in zip(self.expert_names, expert_tensors)}
 
                 optimizer.zero_grad()
                 logits, expert_weights = self.MoE(expert_inputs)
 
-                '''
+                """
                 #TODO add diversity loss?
                 weights_matrix = torch.stack([ew for ew in expert_weights], dim=0)
                 covariance = torch.cov(weights_matrix)
                 diversity_loss = torch.norm(covariance, p="fro")  # Minimize covariance
                 loss += 0.01 * diversity_loss  # Adjust coefficient
-                '''
+                """
                 loss = criterion(logits, labels)
                 entropy_reg = self.entropy_coeff * (expert_weights * torch.log(expert_weights)).sum(dim=1).mean()
                 loss += entropy_reg
@@ -247,22 +244,20 @@ class MoEModel(BasePipeline):
             print(f"Avg Train Loss {avg_train_loss}")
             print(f"Avg Val Score: {val_score}")
 
-            train_weights_str = ", ".join([
-                f"{name} {avg_expert_weights_train[i]:.3f}"
-                for i, name in enumerate(self.expert_names)
-            ])
+            train_weights_str = ", ".join(
+                [f"{name} {avg_expert_weights_train[i]:.3f}" for i, name in enumerate(self.expert_names)]
+            )
             print(f"Train Expert Weights: {train_weights_str}")
-            val_weights_str = ", ".join([
-                f"{name} {avg_expert_weights_val[i]:.3f}"
-                for i, name in enumerate(self.expert_names)
-            ])
+            val_weights_str = ", ".join(
+                [f"{name} {avg_expert_weights_val[i]:.3f}" for i, name in enumerate(self.expert_names)]
+            )
             print(f"Val Expert Weights: {val_weights_str}")
 
             # Early stopping & checkpointing
             if val_score > best_score:
                 best_score = val_score
                 patience_counter = 0
-                torch.save(self.MoE.state_dict(), os.path.join(self.output_dir, 'models/best_moe.pt'))
+                torch.save(self.MoE.state_dict(), os.path.join(self.output_dir, "models/best_moe.pt"))
                 print("Saved best model")
             else:
                 patience_counter += 1
@@ -276,9 +271,11 @@ class MoEModel(BasePipeline):
         # Load best model
         print("Loading best model for inference")
         try:
-            self.MoE.load_state_dict(torch.load(os.path.join(self.output_dir, 'models/best_moe.pt')))
+            self.MoE.load_state_dict(torch.load(os.path.join(self.output_dir, "models/best_moe.pt")))
         except FileNotFoundError:
-            print("No best model checkpoint found. Using current model state (likely from last epoch of training if training just finished).")
+            print(
+                "No best model checkpoint found. Using current model state (likely from last epoch of training if training just finished)."
+            )
 
         # Final predictions on train/val for reporting
         train_preds = self.preds_to_series(self.predict_tensor(train_embeddings, 256), train_sentences.index)
@@ -286,7 +283,9 @@ class MoEModel(BasePipeline):
         return train_preds, val_preds
 
     @torch.no_grad()
-    def predict_tensor(self, embeds_dict: dict[str, torch.Tensor], inference_batch_size: int | None = None) -> np.ndarray:
+    def predict_tensor(
+        self, embeds_dict: dict[str, torch.Tensor], inference_batch_size: int | None = None
+    ) -> np.ndarray:
         def compute_preds(embeds_dict_slice):
             out, _ = self.MoE(embeds_dict_slice)
             if self.config.mode == "classification":
@@ -303,7 +302,7 @@ class MoEModel(BasePipeline):
         for i in range(0, num_samples, inference_batch_size):
             end = i + inference_batch_size
             batch_expert_embeds_dict = {
-                name: embed[i : end]  # slice cached embeddings
+                name: embed[i:end]  # slice cached embeddings
                 for name, embed in embeds_dict.items()
             }
             batch_preds = compute_preds(batch_expert_embeds_dict)
@@ -317,7 +316,7 @@ class MoEModel(BasePipeline):
 
     def predict(self, sentences: pd.Series) -> pd.Series:
         test_embeddings = {
-            name: torch.from_numpy(embeds['test_embeddings'][sentences.index]).float().to(self.device)
+            name: torch.from_numpy(embeds["test_embeddings"][sentences.index]).float().to(self.device)
             for name, embeds in self.expert_embeddings.items()
         }
         preds = self.preds_to_series(self.predict_tensor(test_embeddings, 256), sentences.index)
