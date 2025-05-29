@@ -16,6 +16,7 @@ from transformers import (
     TrainingArguments,
 )
 
+from preprocessing import apply_preprocessing
 from utils import (
     apply_inverse_label_mapping,
     apply_label_mapping,
@@ -136,6 +137,10 @@ class FinetunedClassifier(BasePipeline):
         train_labels = apply_label_mapping(train_labels, self.config.label_mapping)
         val_labels = apply_label_mapping(val_labels, self.config.label_mapping)
 
+        # apply preprocessing
+        if "sanitizer" in self.config.preprocessing:
+            train_sentences = apply_preprocessing(train_sentences, self.config.preprocessing.sanitizer)
+
         # prepare the data
         train_dataset = self._prepare_dataset(train_sentences, train_labels, desc="train")
         eval_dataset = self._prepare_dataset(val_sentences, val_labels, desc="val")
@@ -202,6 +207,10 @@ class FinetunedClassifier(BasePipeline):
     def predict(self, sentences):
         if self.trainer is None:
             raise ValueError("The model has not been trained yet. Please call the train() method first.")
+
+        # apply preprocessing
+        if "sanitizer" in self.config.preprocessing:
+            sentences = apply_preprocessing(sentences, self.config.preprocessing.sanitizer)
 
         # prepare the data
         dataset = self._prepare_dataset(sentences, desc="predict")

@@ -50,6 +50,12 @@ pipeline:
   preprocessing:
     batch_size: 32
 
+    # sanitizer:
+    #   - clean_whitespaces
+    #   - internet
+    #   - punctuation
+    #   - remove_repeated_chars
+
     # difficulty_filter:
     #   path: /home/dayang/dev/workspaces/sentiment-analysis/output/sentiment_model_voting.csv
     #   score_name: score
