@@ -1,65 +1,54 @@
+import pandas as pd
 import torch
 import torch.nn as nn
-import pandas as pd
 from tqdm import tqdm
-from omegaconf import DictConfig, ListConfig
 
 from cache import load_embeddings
-from utils import apply_label_mapping, apply_inverse_label_mapping
+from utils import apply_inverse_label_mapping, apply_label_mapping
+
 from .base import BasePipeline
+
 
 class MLPHeadModel(BasePipeline):
     """
-    Implements a linear head over 
+    Implements a linear head over
     """
-    def __init__(
-        self,
-        config: DictConfig | ListConfig,
-        device: str | torch.device | None = None,
-        output_dir: str = "output",
-        debug: bool = False,
-        verbose: bool = True,
-        **kwargs
-    ):
-        super().__init__(config, device)  # initialize self.config, self.device
-        
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
         embeds_file = f"embeddings_{self.config.embed_type}.npz"
         self.embeddings = load_embeddings(self.config.embed_pipeline, self.config.embed_model, embeds_file)
 
         # model
-        if config.mode == "regression":
+        if self.config.mode == "regression":
             self.label_mapping = {"negative": -1, "neutral": 0, "positive": 1}
             out_size = 1
-        elif config.mode == "classification":
+        elif self.config.mode == "classification":
             self.label_mapping = {"negative": 0, "neutral": 1, "positive": 2}
             out_size = 3
         else:
-            raise ValueError(f"Unknown label mapping: {config.mode}")
+            raise ValueError(f"Unknown label mapping: {self.config.mode}")
 
-        self.classifier = nn.Sequential(
-            nn.LazyLinear(256),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(256, out_size)
-        ).to(self.device)
-    
+        self.classifier = nn.Sequential(nn.LazyLinear(256), nn.ReLU(), nn.Dropout(0.3), nn.Linear(256, out_size)).to(
+            self.device
+        )
 
-    def train(self, train_sentences, train_labels, val_sentences, val_labels):
-
-        embeddings = self.embeddings['train_embeddings']
+    def train(self, train_sentences, train_labels, val_sentences, val_labels, **kwargs):
+        embeddings = self.embeddings["train_embeddings"]
 
         train_embeddings = torch.from_numpy(embeddings[train_sentences.index]).float().to(self.device)
         val_embeddings = torch.from_numpy(embeddings[val_sentences.index]).float().to(self.device)
 
         train_labels = apply_label_mapping(train_labels, self.label_mapping)
         val_labels = apply_label_mapping(val_labels, self.label_mapping)
-        if self.config.mode == 'classification':
+        if self.config.mode == "classification":
             train_labels = torch.from_numpy(train_labels.values).long().to(self.device)
-            val_labels   = torch.from_numpy(val_labels.values).long().to(self.device)
+            val_labels = torch.from_numpy(val_labels.values).long().to(self.device)
             criterion = nn.CrossEntropyLoss()
         else:
             train_labels = torch.from_numpy(train_labels.values).float().unsqueeze(1).to(self.device)
-            val_labels   = torch.from_numpy(val_labels.values).float().unsqueeze(1).to(self.device)
+            val_labels = torch.from_numpy(val_labels.values).float().unsqueeze(1).to(self.device)
             criterion = nn.L1Loss()
 
         train_dataset = torch.utils.data.TensorDataset(train_embeddings, train_labels)
@@ -69,7 +58,7 @@ class MLPHeadModel(BasePipeline):
 
         self.classifier.train()
         for epoch in range(self.config.num_epochs):
-            for x_batch, y_batch in tqdm(train_loader, desc=f"Epoch {epoch+1}"):
+            for x_batch, y_batch in tqdm(train_loader, desc=f"Epoch {epoch + 1}"):
                 optimizer.zero_grad()
                 pred = self.classifier(x_batch)
                 loss = criterion(pred, y_batch)
@@ -77,8 +66,8 @@ class MLPHeadModel(BasePipeline):
                 optimizer.step()
 
         train_predictions = self.preds_to_series(self.predict_tensor(train_embeddings), train_sentences.index)
-        val_predictions   = self.preds_to_series(self.predict_tensor(val_embeddings), val_sentences.index)
-            
+        val_predictions = self.preds_to_series(self.predict_tensor(val_embeddings), val_sentences.index)
+
         return train_predictions, val_predictions
 
     def preds_to_series(self, preds, index):
@@ -90,12 +79,12 @@ class MLPHeadModel(BasePipeline):
     def predict_tensor(self, embeds):
         self.classifier.eval()
         preds = self.classifier(embeds)
-        if self.config.mode == 'classification':
+        if self.config.mode == "classification":
             return preds.argmax(dim=1).detach().cpu().numpy()
         return preds.squeeze().detach().cpu().numpy()
 
     def predict(self, sentences):
-        embeddings = self.embeddings['test_embeddings']
+        embeddings = self.embeddings["test_embeddings"]
         test_embeddings = torch.from_numpy(embeddings[sentences.index]).float().to(self.device)
         preds = self.preds_to_series(self.predict_tensor(test_embeddings), sentences.index)
         return preds

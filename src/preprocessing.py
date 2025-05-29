@@ -1,15 +1,19 @@
+import logging
 import re
+
 import nltk
 import pandas as pd
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 
+logger = logging.getLogger(__name__)
+
 # Downlod WordNet if needed
 try:
-    nltk.data.find('corpora/wordnet')
-    print("WordNet is already downloaded.")
+    nltk.data.find("corpora/wordnet")
+    logger.info("WordNet is already downloaded.")
 except LookupError:
-    print("WordNet not found. Downloading...")
-    nltk.download('wordnet')
+    logger.info("WordNet not found. Downloading...")
+    nltk.download("wordnet")
 
 REGEX_RULES = {
     "clean_whitespaces": (re.compile(r"\s{2,}"), " "),
@@ -44,7 +48,7 @@ REGEX_RULES = {
     # "formatting _": (re.compile(r"_+([^\* ]+)_+"), "\1"),
 
     # "not": (re.compile(r"not (\w+)"), "not_\1"),
-}
+}  # fmt: off
 
 ALL_RULES = [
     "clean_whitespaces",
@@ -77,9 +81,7 @@ ALL_RULES = [
     "lemmatize",
 
     "lowercase",
-]
-
-LONG_SENTENCE_THRESHOLD = 512
+]  # fmt: off
 
 # collection of common stopwords
 STOPWORDS = {
@@ -104,7 +106,7 @@ STOPWORDS = {
     "after", "above", "below", "to", "from", "up", "down", "in", "on", "over", "further",
     "then", "once", "here", "there", "both", "each", "more", "most", "some", "such", "own",
     "so", "can", "will", "just", "don", "should", "now",
-}
+}  # fmt: off
 
 
 def preprocess_text(
@@ -116,7 +118,7 @@ def preprocess_text(
         # get rule prefixes
         rule_prefixes = name.split("/")
         for i in range(1, len(rule_prefixes)):
-            rule_prefixes[i] = f"{rule_prefixes[i-1]}/{rule_prefixes[i]}"
+            rule_prefixes[i] = f"{rule_prefixes[i - 1]}/{rule_prefixes[i]}"
 
         # check if rule is active
         if not any(prefix in active_rules for prefix in rule_prefixes):
@@ -133,10 +135,10 @@ def preprocess_text(
     # word stemming or lemmatization
     if "stem" in active_rules and "lemmatize" in active_rules:
         raise ValueError("Cannot use both stemming and lemmatization at the same time.")
-    elif "stem" in active_rules: # stem
+    elif "stem" in active_rules:
         stemmer = PorterStemmer()
         text = " ".join(stemmer.stem(word) for word in text.split())
-    elif "lemmatize" in active_rules: # lemmatize
+    elif "lemmatize" in active_rules:
         lemmatizer = WordNetLemmatizer()
         text = " ".join(lemmatizer.lemmatize(word) for word in text.split())
 
@@ -149,8 +151,10 @@ def preprocess_text(
 
 def apply_preprocessing(
     sentences: pd.Series,
-    active_rules: set[str],
+    active_rules: set[str] | list,
 ):
+    active_rules = set(active_rules)
+
     # check if active_rules only contains valid rules
     if not active_rules.issubset(ALL_RULES):
         raise ValueError(f"Invalid preprocessing rules: {active_rules - set(ALL_RULES)}")
@@ -161,4 +165,5 @@ def apply_preprocessing(
     # apply preprocessing rules on each sentence
     sentences = sentences.apply(lambda x: preprocess_text(x, active_rules=active_rules))
 
+    logger.info(f"Applied preprocessing rules: {active_rules}")
     return sentences

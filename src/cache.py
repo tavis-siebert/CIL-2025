@@ -11,6 +11,7 @@ T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
 
+
 class Cache:
     def __init__(self, **kwargs):
         self.init(**kwargs)
@@ -22,7 +23,15 @@ class Cache:
         else:
             self.cache_dir = None
 
-    def __call__(self, f: Callable[[], T], path: str | Path, refresh: bool = False, save_kwargs: dict[str, Any] = {}, load_kwargs: dict[str, Any] = {}, verbose: bool = True) -> T:
+    def __call__(
+        self,
+        f: Callable[[], T],
+        path: str | Path,
+        refresh: bool = False,
+        save_kwargs: dict[str, Any] = {},
+        load_kwargs: dict[str, Any] = {},
+        verbose: bool = True,
+    ) -> T:
         """Cache the output of a function to a file.
 
         Args:
@@ -86,12 +95,13 @@ class Cache:
                 raise ValueError(f"Unknown file format: {path.suffix}")
             if verbose:
                 logger.info(f"Loaded from cache: {path}")
-        return output # type: ignore
+        return output  # type: ignore
 
     def get_path(self, path: str | Path) -> Path:
         if self.cache_dir is None:
             raise ValueError("Cache directory is not set. Please call init() first.")
         return self.cache_dir / path
+
 
 CACHE = Cache()
 
@@ -110,6 +120,8 @@ def save_embeddings(embeddings: Any, pipeline_name: str, model_name: str, file_n
 def load_embeddings(pipeline_name: str, model_name: str, file_name: str = "embeddings.npz", **kwargs) -> Any:
     """Load embeddings from the cache."""
     path = get_embeddings_folder(pipeline_name, model_name) / file_name
+
     def raise_not_found():
         raise FileNotFoundError(f"Embeddings not found in cache: {path}")
+
     return CACHE(raise_not_found, path, **kwargs)
