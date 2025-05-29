@@ -19,6 +19,7 @@ We have implemented the following pipelines
 - `mlp_head.yaml`: TODO
 - `boosted_mlp_head.yaml`: TODO
 - `pretrained_classifier.yaml`: pretrained language models (inference-only)
+- `mixture_of_experts.yaml`: TODO
 
 To reproduce our final submission with a train score of TODO and validation score of TODO, run
 ```bash

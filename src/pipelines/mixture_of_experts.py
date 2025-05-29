@@ -1,18 +1,21 @@
 import os
+from typing import List
+
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
+from omegaconf import DictConfig, ListConfig
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
-from omegaconf import DictConfig, ListConfig
-from typing import List
 
 from cache import load_embeddings
+from utils import apply_inverse_label_mapping, apply_label_mapping
+
 from .base import BasePipeline
-from utils import apply_label_mapping, apply_inverse_label_mapping
+
 
 class MoE(nn.Module):
     # (Copy or import the existing SentimentMoE implementation here)
@@ -43,7 +46,7 @@ class MoE(nn.Module):
                 if module.out_features == len(expert_configs):
                     nn.init.constant_(module.weight, 1e-4)
                     nn.init.constant_(module.bias, 0.0)
-        
+
         self.fusion = nn.Sequential(
             nn.Linear(total_fusion_input_dim, 1024),
             nn.ReLU(),
@@ -59,9 +62,9 @@ class MoE(nn.Module):
             nn.Dropout(0.4),
             nn.Linear(256, out_size),
         )
-        
+
     def forward(self, expert_inputs, temp=1.0): # temp left if someone wants to play w/ it in the future
-        # NOTE: refactor the commented lines if you want to use the original architecture, 
+        # NOTE: refactor the commented lines if you want to use the original architecture,
         # but it feels weird to use raw-embeddings if they're not in the same feature space (i.e. pre-processor())
         # ---------------------
         # gate_inputs, processor_outputs = [], []
@@ -125,7 +128,7 @@ class MoEModel(BasePipeline):
 
         # MoE model
         self.MoE = MoE(self.config.experts, out_size).to(self.device)
-        
+
         # 5. Training hyperparameters from config
         self.batch_size = config.batch_size
         self.num_epochs = config.num_epochs
@@ -140,6 +143,7 @@ class MoEModel(BasePipeline):
         train_labels: pd.Series,
         val_sentences: pd.Series,
         val_labels: pd.Series,
+        **kwargs
     ) -> tuple[np.ndarray, np.ndarray]:
 
         # Prepare embeddings for each expert
@@ -190,7 +194,7 @@ class MoEModel(BasePipeline):
 
                 optimizer.zero_grad()
                 logits, expert_weights = self.MoE(expert_inputs)
-                
+
                 '''
                 #TODO add diversity loss?
                 weights_matrix = torch.stack([ew for ew in expert_weights], dim=0)
@@ -198,7 +202,7 @@ class MoEModel(BasePipeline):
                 diversity_loss = torch.norm(covariance, p="fro")  # Minimize covariance
                 loss += 0.01 * diversity_loss  # Adjust coefficient
                 '''
-                loss = criterion(logits, labels) 
+                loss = criterion(logits, labels)
                 entropy_reg = self.entropy_coeff * (expert_weights * torch.log(expert_weights)).sum(dim=1).mean()
                 loss += entropy_reg
 
@@ -209,7 +213,7 @@ class MoEModel(BasePipeline):
                 train_loss += loss.item()
                 expert_weights_sum_train += expert_weights.sum(dim=0).detach()
                 samples_count_train += labels.size(0)
-            
+
             avg_train_loss = train_loss / len(train_loader)
             avg_expert_weights_train = expert_weights_sum_train / samples_count_train
 
@@ -231,7 +235,7 @@ class MoEModel(BasePipeline):
                     all_preds.append(preds.cpu())
                     all_labels.append(labels.cpu())
                     expert_weights_sum_val += expert_weights.sum(dim=0).detach()
-            
+
             all_preds, all_labels = torch.cat(all_preds, dim=0), torch.cat(all_labels, dim=0)
             mae = torch.abs(all_preds.float() - all_labels.float()).mean().item()
             val_score = 0.5 * (2 - mae)
@@ -265,7 +269,7 @@ class MoEModel(BasePipeline):
                 if patience_counter >= self.patience:
                     print(f"Early stopping after epoch {epoch + 1}")
                     break
-        
+
         # --- Training ended ----
         print("Training ended.\nStarting Testing")
 
@@ -294,7 +298,7 @@ class MoEModel(BasePipeline):
         if inference_batch_size is None or inference_batch_size >= num_samples:
             print("WARNING: Large batch sizes might result in out-of-memory errors if there are many experts")
             return compute_preds(embeds_dict)
-        
+
         preds = []
         for i in range(0, num_samples, inference_batch_size):
             end = i + inference_batch_size
@@ -305,7 +309,7 @@ class MoEModel(BasePipeline):
             batch_preds = compute_preds(batch_expert_embeds_dict)
             preds.extend(batch_preds.tolist())
         return np.array(preds)
-    
+
     def preds_to_series(self, preds, index):
         preds = pd.Series(preds, index=index)
         preds = apply_inverse_label_mapping(preds, self.label_mapping)
