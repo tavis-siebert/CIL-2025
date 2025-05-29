@@ -12,7 +12,7 @@ from sklearn.ensemble import (
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
-from xgboost import XGBClassifier
+from xgboost import XGBClassifier, XGBRegressor
 
 from preprocessing import apply_preprocessing
 from utils import (
@@ -31,7 +31,11 @@ def create_model(model_config, label_mapping):
     model_type = model_config.pop("type")
 
     if label_mapping == "regression":
-        raise ValueError("Regression not supported yet")
+        match model_type:
+            case "XGBRegressor":
+                return XGBRegressor(**model_config)
+            case _:
+                raise ValueError("Unknown model type for regression: {model_type}")
 
     if label_mapping == "classification":
         # classification models
@@ -208,6 +212,7 @@ class ClassicalMLPipeline(BasePipeline):
 
         # apply inverse label mapping
         predictions = pd.Series(predictions, index=sentences.index)
-        predictions = apply_inverse_label_mapping(predictions, self.label_mapping)
+        if self.config.label_mapping == "classification":
+            predictions = apply_inverse_label_mapping(predictions, self.label_mapping)
 
         return predictions
