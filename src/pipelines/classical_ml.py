@@ -74,7 +74,7 @@ class ClassicalMLPipeline(BasePipeline):
         output_dir: str = "output",
         debug: bool = False,
         verbose: bool = True,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(config, verbose=verbose)
 
@@ -106,7 +106,9 @@ class ClassicalMLPipeline(BasePipeline):
         self.model = create_model(model_config, config.label_mapping)
 
         # configure preprocessing
-        self.preprocessing_rules = set(OmegaConf.to_container(config.preprocessing)) if "preprocessing" in config else None
+        self.preprocessing_rules = (
+            set(OmegaConf.to_container(config.preprocessing)) if "preprocessing" in config else None
+        )
 
     def train(self, train_sentences, train_labels, val_sentences, val_labels, **kwargs):
         # apply label mapping
@@ -120,7 +122,9 @@ class ClassicalMLPipeline(BasePipeline):
 
         # reduce train set size if specified
         if "percent_train_samples" in self.config:
-            print(f"Warning: Reducing train set size to {self.config.percent_train_samples * 100}% ({len(train_sentences)} samples)")
+            print(
+                f"Warning: Reducing train set size to {self.config.percent_train_samples * 100}% ({len(train_sentences)} samples)"
+            )
             train_sentences_for_fit = train_sentences[: int(len(train_sentences) * self.config.percent_train_samples)]
             train_labels_for_fit = train_labels[: int(len(train_sentences) * self.config.percent_train_samples)]
         else:

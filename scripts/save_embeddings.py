@@ -26,7 +26,9 @@ def main(args):
     CACHE.init(cache_dir=args.cache)
     embeddings_folder = get_embeddings_folder(args.pipeline, args.model)
     if CACHE.get_path(embeddings_folder).is_dir():
-        raise FileExistsError(f"The embeddings already exist in the cache. Please delete the folder: {embeddings_folder}")
+        raise FileExistsError(
+            f"The embeddings already exist in the cache. Please delete the folder: {embeddings_folder}"
+        )
 
     # get device handler
     device = get_device(args.device, verbose=False)
@@ -65,7 +67,13 @@ def main(args):
             dataloader = torch.utils.data.DataLoader(
                 sentences,
                 batch_size=batch_size,
-                collate_fn=lambda sentences: tokenizer([preprocess_data(s, args.model) for s in sentences], return_tensors="pt", padding=True, truncation=True, max_length=512),
+                collate_fn=lambda sentences: tokenizer(
+                    [preprocess_data(s, args.model) for s in sentences],
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=True,
+                    max_length=512,
+                ),
                 shuffle=False,
             )
 
@@ -76,7 +84,9 @@ def main(args):
                 # extract CLS token embedding
                 embeddings_cls = last_hidden_state[:, 0]
                 # apply mean pooling
-                embeddings_mean = torch.sum(last_hidden_state * input_mask_expanded, dim=1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+                embeddings_mean = torch.sum(last_hidden_state * input_mask_expanded, dim=1) / torch.clamp(
+                    input_mask_expanded.sum(1), min=1e-9
+                )
                 # apply max pooling
                 embeddings_max = torch.max(torch.where(input_mask_expanded == 0, -1e9, last_hidden_state), dim=1).values
                 return embeddings_cls, embeddings_mean, embeddings_max
@@ -105,7 +115,9 @@ def main(args):
                 "max": np.concatenate(embeddings_all_max, axis=0),
             }
             predictions_all = np.concatenate(predictions_all, axis=0)
-            predictions_all = pd.DataFrame(predictions_all, index=sentences.index, columns=model.config.id2label.values())
+            predictions_all = pd.DataFrame(
+                predictions_all, index=sentences.index, columns=model.config.id2label.values()
+            )
 
             return embeddings_all, predictions_all
 
@@ -124,6 +136,7 @@ def main(args):
         save_embeddings(test_predictions, args.pipeline, args.model, "predictions_test.csv")
     else:
         raise ValueError(f"Unknown pipeline: {args.pipeline}")
+
 
 if __name__ == "__main__":
     # configure logging

@@ -16,13 +16,13 @@ logger = logging.getLogger(__name__)
 
 def setup_logging(level: int = logging.INFO, format: str | None = None, dateformat: str | None = None):
     if format is None:
-        format="[%(asctime)s] %(levelname)-8s %(name)s:%(lineno)-5d %(message)s"
+        format = "[%(asctime)s] %(levelname)-8s %(name)s:%(lineno)-5d %(message)s"
     if dateformat is None:
-        dateformat="%Y-%m-%d %H:%M:%S"
+        dateformat = "%Y-%m-%d %H:%M:%S"
 
     # configure logging system
     logging.basicConfig(
-        stream=sys.stdout, # log to stdout instead of stderr to sync with print()
+        stream=sys.stdout,  # log to stdout instead of stderr to sync with print()
         level=level,
         format=format,
         datefmt=dateformat,
@@ -30,7 +30,11 @@ def setup_logging(level: int = logging.INFO, format: str | None = None, dateform
     logging.captureWarnings(True)
 
 
-def get_config(config_path: str | Path, overwrite: dict[str, Any] = {}, verbose: bool = True) -> DictConfig | ListConfig:
+def get_config(
+    config_path: str | Path,
+    overwrite: dict[str, Any] = {},
+    verbose: bool = True,
+) -> DictConfig | ListConfig:
     # load the config file
     config = OmegaConf.load(config_path)
 
@@ -144,6 +148,7 @@ def load_glove_embeddings(glove_file_path):
             coefs = np.asarray(values[1:], dtype="float32")
             embeddings_index[word] = coefs
     return embeddings_index
+
 
 def sentences_to_glove_embeddings(sentences, glove_embeddings):
     dim = len(glove_embeddings[next(iter(glove_embeddings))])
