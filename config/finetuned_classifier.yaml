@@ -57,10 +57,10 @@ pipeline:
     #   - remove_repeated_chars
 
     # difficulty_filter:
-    #   path: /home/dayang/dev/workspaces/sentiment-analysis/output/sentiment_model_voting.csv
+    #   path: data/sentiment_model_voting.csv
     #   score_name: score
     #   score_threshold: 0.5
-    #   p: 0.25
+    #   p: 0.33
 
     tokenizer:
       padding: true
