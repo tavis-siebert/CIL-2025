@@ -30,7 +30,8 @@ pipeline:
   
   # training
   batch_size: 64
-  num_epochs: 30
+  num_epochs: 5
   learning_rate: 0.001
   weight_decay: 0.01
-  patience: 5
+  patience: 10
+  entropy_coeff: 0.03 # important for softmax gates to prevent gate collapse

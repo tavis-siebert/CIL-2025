@@ -31,12 +31,18 @@ class MoE(nn.Module):
             total_fusion_input_dim += expert.processor_output_dim
 
         self.gate = nn.Sequential(
-            nn.LazyLinear(256),
+            nn.Linear(total_fusion_input_dim, 256),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(256, len(expert_configs)),
-            nn.Softmax(dim=1),
+            nn.Linear(256, len(expert_configs))
         )
+        # uniform init
+        for module in self.gate:
+            if isinstance(module, nn.Linear):
+                nn.init.xavier_uniform_(module.weight)
+                if module.out_features == len(expert_configs):
+                    nn.init.constant_(module.weight, 1e-4)
+                    nn.init.constant_(module.bias, 0.0)
         
         self.fusion = nn.Sequential(
             nn.Linear(total_fusion_input_dim, 1024),
@@ -54,14 +60,22 @@ class MoE(nn.Module):
             nn.Linear(256, out_size),
         )
         
-    def forward(self, expert_inputs):
-        gate_inputs, processor_outputs = [], []
+    def forward(self, expert_inputs, temp=1.0): # temp left if someone wants to play w/ it in the future
+        # NOTE: refactor the commented lines if you want to use the original architecture, 
+        # but it feels weird to use raw-embeddings if they're not in the same feature space (i.e. pre-processor())
+        # ---------------------
+        # gate_inputs, processor_outputs = [], []
+        processor_outputs = []
         for name, expert_embed in expert_inputs.items():
-            gate_inputs.append(expert_embed)
+            # gate_inputs.append(expert_embed)
             processor_outputs.append(self.processors[name](expert_embed))
 
-        gate_input = torch.cat(gate_inputs, dim=1)
-        expert_weights = self.gate(gate_input)
+        # gate_input = torch.cat(gate_inputs, dim=1)
+        # expert_weights = self.gate(gate_input)
+        expert_weights = torch.softmax(
+            self.gate(torch.cat(processor_outputs, dim=1)) / temp,
+            dim=1
+        )
 
         weighted_expert_outputs = []
         for i, name in enumerate(expert_inputs):
@@ -118,6 +132,7 @@ class MoEModel(BasePipeline):
         self.lr = config.learning_rate
         self.weight_decay = config.weight_decay
         self.patience = config.patience
+        self.entropy_coeff = config.entropy_coeff
 
     def train(
         self,
@@ -175,8 +190,18 @@ class MoEModel(BasePipeline):
 
                 optimizer.zero_grad()
                 logits, expert_weights = self.MoE(expert_inputs)
+                
+                '''
+                #TODO add diversity loss?
+                weights_matrix = torch.stack([ew for ew in expert_weights], dim=0)
+                covariance = torch.cov(weights_matrix)
+                diversity_loss = torch.norm(covariance, p="fro")  # Minimize covariance
+                loss += 0.01 * diversity_loss  # Adjust coefficient
+                '''
+                loss = criterion(logits, labels) 
+                entropy_reg = self.entropy_coeff * (expert_weights * torch.log(expert_weights)).sum(dim=1).mean()
+                loss += entropy_reg
 
-                loss = criterion(logits, labels)
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.MoE.parameters(), max_norm=1.0)
                 optimizer.step()
@@ -259,14 +284,14 @@ class MoEModel(BasePipeline):
     @torch.no_grad()
     def predict_tensor(self, embeds_dict: dict[str, torch.Tensor], inference_batch_size: int | None = None) -> np.ndarray:
         def compute_preds(embeds_dict_slice):
-            preds, _ = self.MoE(embeds_dict_slice)
+            out, _ = self.MoE(embeds_dict_slice)
             if self.config.mode == "classification":
-                preds = preds.argmax(dim=1).detach().cpu().numpy()
-            return preds.squeeze().detach().cpu().numpy()
+                return out.argmax(dim=1).detach().cpu().numpy()
+            return out.squeeze().detach().cpu().numpy()
 
         self.MoE.eval()
         num_samples = len(list(embeds_dict.values())[0])
-        if inference_batch_size >= num_samples or inference_batch_size is None:
+        if inference_batch_size is None or inference_batch_size >= num_samples:
             print("WARNING: Large batch sizes might result in out-of-memory errors if there are many experts")
             return compute_preds(embeds_dict)
         
@@ -275,7 +300,7 @@ class MoEModel(BasePipeline):
             end = i + inference_batch_size
             batch_expert_embeds_dict = {
                 name: embed[i : end]  # slice cached embeddings
-                for name, embed in embeds_dict
+                for name, embed in embeds_dict.items()
             }
             batch_preds = compute_preds(batch_expert_embeds_dict)
             preds.extend(batch_preds.tolist())
@@ -289,9 +314,7 @@ class MoEModel(BasePipeline):
     def predict(self, sentences: pd.Series) -> pd.Series:
         test_embeddings = {
             name: torch.from_numpy(embeds['test_embeddings'][sentences.index]).float().to(self.device)
-            for name, embeds in self.expert_embeddings
+            for name, embeds in self.expert_embeddings.items()
         }
-        # 2. Predict
-        preds = self.preds_to_series(self.predict_tensor(test_embeddings), sentences.index)
-        # 3. Return pandas Series
+        preds = self.preds_to_series(self.predict_tensor(test_embeddings, 256), sentences.index)
         return preds
