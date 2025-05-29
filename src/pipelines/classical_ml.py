@@ -115,7 +115,7 @@ class ClassicalMLPipeline(BasePipeline):
 
         # apply preprocessing for train
         if self.preprocessing_rules:
-            train_sentences = apply_preprocessing(train_sentences, self.preprocessing_rules)
+            train_sentences_for_fit = apply_preprocessing(train_sentences, self.preprocessing_rules)
 
         # reduce train set size if specified
         if "percent_train_samples" in self.config:
@@ -125,7 +125,7 @@ class ClassicalMLPipeline(BasePipeline):
             train_sentences_for_fit = train_sentences[: int(len(train_sentences) * self.config.percent_train_samples)]
             train_labels_for_fit = train_labels[: int(len(train_sentences) * self.config.percent_train_samples)]
         else:
-            train_sentences_for_fit = train_sentences
+            train_sentences_for_fit = train_sentences_for_fit
             train_labels_for_fit = train_labels
 
         # get embeddings for train
