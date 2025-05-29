@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 # Downlod WordNet if needed
 try:
     nltk.data.find("corpora/wordnet")
-    print("WordNet is already downloaded.")
+    logger.info("WordNet is already downloaded.")
 except LookupError:
-    print("WordNet not found. Downloading...")
+    logger.info("WordNet not found. Downloading...")
     nltk.download("wordnet")
 
 REGEX_RULES = {

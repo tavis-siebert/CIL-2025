@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 from omegaconf import OmegaConf
 from sklearn.ensemble import (
@@ -19,6 +21,8 @@ from utils import (
 )
 
 from .base import BasePipeline
+
+logger = logging.getLogger(__name__)
 
 
 def create_model(model_config, label_mapping):
@@ -114,7 +118,7 @@ class ClassicalMLPipeline(BasePipeline):
 
         # reduce train set size if specified
         if "percent_train_samples" in self.config:
-            print(
+            logger.warning(
                 f"Warning: Reducing train set size to {self.config.percent_train_samples * 100}% ({len(train_sentences)} samples)"
             )
             train_sentences_for_fit = train_sentences[: int(len(train_sentences) * self.config.percent_train_samples)]
