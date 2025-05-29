@@ -34,7 +34,10 @@ class MoE(nn.Module):
             total_fusion_input_dim += expert.processor_output_dim
 
         self.gate = nn.Sequential(
-            nn.Linear(total_fusion_input_dim, 256), nn.ReLU(), nn.Dropout(0.3), nn.Linear(256, len(expert_configs))
+            nn.Linear(total_fusion_input_dim, 256),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(256, len(expert_configs)),
         )
         # uniform init
         for module in self.gate:
