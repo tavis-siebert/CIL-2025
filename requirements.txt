@@ -5,6 +5,7 @@ omegaconf
 wandb
 
 scikit-learn
+imblearn
 transformers
 accelerate
 huggingface_hub[hf_transfer,hf_xet] # for faster downloads

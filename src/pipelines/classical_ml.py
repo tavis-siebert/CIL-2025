@@ -1,6 +1,8 @@
 import logging
 
 import pandas as pd
+from imblearn.over_sampling import RandomOverSampler
+from imblearn.under_sampling import RandomUnderSampler
 from omegaconf import OmegaConf
 from sklearn.ensemble import (
     GradientBoostingClassifier,
@@ -119,11 +121,20 @@ class ClassicalMLPipeline(BasePipeline):
             else None
         )
 
+        self.use_undersampling = self.config.get("undersampling", False)
+        self.use_oversampling = self.config.get("oversampling", False)
+        if self.use_undersampling and self.use_oversampling:
+            raise ValueError(
+                "Cannot use both undersampling and oversampling at the same time."
+            )
+
     def train(self, train_sentences, train_labels, val_sentences, val_labels, **kwargs):
         # apply label mapping
         if self.label_mapping:
             train_labels = apply_label_mapping(train_labels, self.label_mapping)
             val_labels = apply_label_mapping(val_labels, self.label_mapping)
+
+        train_sentences_for_fit = train_sentences.copy()
 
         # apply preprocessing for train
         if self.preprocessing_rules:
@@ -153,6 +164,24 @@ class ClassicalMLPipeline(BasePipeline):
             )
         else:
             train_embeddings = self.vectorizer.fit_transform(train_sentences_for_fit)
+
+        if self.use_undersampling:
+            undersampler = RandomUnderSampler()
+            train_embeddings, train_labels_for_fit = undersampler.fit_resample(
+                train_embeddings, train_labels_for_fit
+            )
+            logger.info(
+                f"Undersampled train set to {len(train_labels_for_fit)} samples"
+            )
+
+        if self.use_oversampling:
+            oversampler = RandomOverSampler()
+            train_embeddings, train_labels_for_fit = oversampler.fit_resample(
+                train_embeddings, train_labels_for_fit
+            )
+            logger.info(
+                f"Oversampled train set to {len(train_labels_for_fit)} samples"
+            )
 
         # train
         self.model.fit(train_embeddings, train_labels_for_fit)
