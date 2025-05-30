@@ -8,15 +8,15 @@ pipeline:
   # embeddings
   embed_type: mean
   embed_pipeline: huggingface
-  embed_model: microsoft/deberta-v3-base
+  embed_model: FacebookAI/roberta-large
 
   # model params
-  n_learners: 8
+  n_learners: 10
   hidden_sizes: [128]
   dropout_p: 0.3
 
   # training args
-  mode: regression  # regression, classification
+  mode: classification  # regression, classification
   num_epochs: 5
   boost_rate: 0.1
   batch_size: 64

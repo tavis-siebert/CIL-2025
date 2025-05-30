@@ -33,23 +33,24 @@ class MLP(nn.Module):
         """
         super().__init__()
 
-        layers = []
-
-        layers.append(nn.LazyLinear(hidden_sizes[0]))
-        layers.append(nn.ReLU())
-
-        for h0, h1 in zip(hidden_sizes, hidden_sizes[1:]):
-            layers.append(nn.Linear(h0, h1))
-            layers.append(nn.ReLU())
-            layers.append(nn.Dropout(dropout_p))
-
-        # final layer
         if mode == "classification":
             out_size = 3
         else:
             out_size = 1
 
-        layers.append(nn.Linear(hidden_sizes[-1], out_size))
+        layers = []
+        if hidden_sizes == []:
+            layers.append(nn.LazyLinear(out_size))
+        else:
+            layers.append(nn.LazyLinear(hidden_sizes[0]))
+            layers.append(nn.ReLU())
+
+            for h0, h1 in zip(hidden_sizes, hidden_sizes[1:]):
+                layers.append(nn.Linear(h0, h1))
+                layers.append(nn.ReLU())
+                layers.append(nn.Dropout(dropout_p))
+
+            layers.append(nn.Linear(hidden_sizes[-1], out_size))
 
         # the actual model
         self.net = nn.Sequential(*layers)
