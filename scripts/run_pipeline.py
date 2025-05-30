@@ -88,7 +88,7 @@ def main(args):
         score_train = evaluate_score(train_labels, train_predictions)
         score_val = evaluate_score(val_labels, val_predictions)
         cm_train = confusion_matrix(train_labels, train_predictions)
-        cm_val = confusion_matrix(train_labels, train_predictions)
+        cm_val = confusion_matrix(val_labels, val_predictions)
         logger.info(f"Score (train): {score_train:.05f}")
         logger.info(f"Score (val): {score_val:.05f}")
         logger.info(f"Confusion matrix (train):\n{cm_train}")
