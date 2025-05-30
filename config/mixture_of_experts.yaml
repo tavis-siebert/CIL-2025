@@ -14,7 +14,7 @@ pipeline:
   #  - embed_type = which embedding to use (e.g. cls, mean, max for huggingface)
   #  - processor_output_dim = what is the size of the embedding we want after initial projection to shared feature space?
 
-  experts: 
+  experts:
     - embed_model: cardiffnlp/twitter-roberta-base-sentiment-latest
       embed_pipeline: huggingface
       embed_type: mean
@@ -31,11 +31,12 @@ pipeline:
       embed_pipeline: huggingface
       embed_type: mean
       processor_output_dim: 512
-  
+
   # training
   batch_size: 64
   num_epochs: 20
   learning_rate: 0.001
   weight_decay: 0.01
   patience: 5
+  diversity_coeff: 0.01
   entropy_coeff: 0.03 # important for softmax gates to prevent gate collapse

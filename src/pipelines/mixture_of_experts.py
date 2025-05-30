@@ -198,14 +198,14 @@ class MoEModel(BasePipeline):
                 optimizer.zero_grad()
                 logits, expert_weights = self.MoE(expert_inputs)
 
-                """
-                #TODO add diversity loss?
+                loss = criterion(logits, labels)
+
+                # TODO add diversity loss?
                 weights_matrix = torch.stack([ew for ew in expert_weights], dim=0)
                 covariance = torch.cov(weights_matrix)
                 diversity_loss = torch.norm(covariance, p="fro")
-                loss += 0.01 * diversity_loss
-                """
-                loss = criterion(logits, labels)
+                loss += self.diversity_coeff * diversity_loss
+
                 entropy_reg = self.entropy_coeff * (expert_weights * torch.log(expert_weights)).sum(dim=1).mean()
                 loss += entropy_reg
 
