@@ -16,12 +16,24 @@ python scripts/run_pipeline.py --config config/<config_file>.yaml
 
 We have implemented the following pipelines:
 - `classical_ml_bow_*.yaml`: bag-of-words embeddings + classical machine learning models (e.g., logistic regression, random forest, SVM, XGBoost)
-- `mlp_head.yaml`: TODO
-- `boosted_mlp_head.yaml`: TODO
-- `mixture_of_experts.yaml`: TODO
+- `mlp_head.yaml`: pretrained embeddings + MLP head
+- `boosted_mlp_head.yaml`: pretrained embeddings + boosted MLP head
 - `pretrained_classifier.yaml`: pretrained language models (inference-only)
 - `finetuned_classifier.yaml`: finetuned language models
+- `mixture_of_experts.yaml`: multiple pretrained embeddings + mixture-of-experts module
 
+## Extract embeddings
+For some pipelines, we use pretrained embeddings extracted from pretrained models. To extract and save these embeddings to the cache, use the `save_embeddings.py` script.
+- To extract and save embeddings from [`SentenceTransformer`](https://huggingface.co/models?library=sentence-transformers) models to the cache, run
+    ```bash
+    python scripts/save_embeddings.py --cache <cache_dir> --pipeline sentencetransformer --model <model_name>
+    ```
+- To extract and save embeddings and predictions from [HuggingFace](https://huggingface.co/models?pipeline_tag=text-classification&sort=trending&search=sentiment) models to the cache, run
+    ```bash
+    python scripts/save_embeddings.py --cache <cache_dir> --pipeline huggingface --model <model_name>
+    ```
+
+## Final submission
 To reproduce our final submission with a train score of TODO and validation score of TODO, run
 ```bash
 python scripts/run_pipeline.py --config config/TODO.yaml
@@ -49,16 +61,6 @@ To add new pipelines, create the following two files
 To save intermediate outputs of expensive function calls to the cache, you can use the `CACHE` object provided by the `cache.py` module. To specifically save and load embeddings from the cache, you can use the `save_embeddings` and `load_embeddings` wrappers around the `CACHE` object.
 
 ### Cache embeddings
-To extract and save embeddings from [`SentenceTransformer`](https://huggingface.co/models?library=sentence-transformers) models to the cache, run
-```bash
-python scripts/save_embeddings.py --cache <cache_dir> --pipeline sentencetransformer --model <model_name>
-```
-
-To extract and save embeddings and predictions from [HuggingFace](https://huggingface.co/models?pipeline_tag=text-classification&sort=trending&search=sentiment) models to the cache, run
-```bash
-python scripts/save_embeddings.py --cache <cache_dir> --pipeline huggingface --model <model_name>
-```
-
 To save custom embeddings to the cache, use
 ```python
 from cache import CACHE, save_embeddings
