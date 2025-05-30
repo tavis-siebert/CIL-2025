@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -59,17 +60,61 @@ class MLPHeadModel(BasePipeline):
         train_dataset = torch.utils.data.TensorDataset(train_embeddings, train_labels)
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.config.batch_size, shuffle=True)
 
+        val_dataset = torch.utils.data.TensorDataset(val_embeddings, val_labels)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=256, shuffle=False)
+
         optimizer = torch.optim.Adam(self.classifier.parameters(), lr=1e-4, weight_decay=0.01)
 
-        self.classifier.train()
+        best_score = 0.0
+        patience_counter = 0
         for epoch in range(self.config.num_epochs):
+            # train epoch
+            self.classifier.train()
+            train_loss = 0.0
             for x_batch, y_batch in tqdm(train_loader, desc=f"Epoch {epoch + 1}"):
                 optimizer.zero_grad()
                 pred = self.classifier(x_batch)
                 loss = criterion(pred, y_batch)
+                train_loss += loss.item()
                 loss.backward()
                 optimizer.step()
+            avg_train_loss = train_loss / len(train_loader)
 
+            # eval
+            self.classifier.eval()
+            all_preds, all_labels = [], []
+            with torch.no_grad():
+                for x_batch, y_batch in val_loader:
+                    pred = self.classifier(x_batch)
+                    if self.config.mode == 'classification':
+                        pred = pred.argmax(dim=1)
+                    else:
+                        pred = pred.round().clip(-1, 1)
+                    all_preds.append(pred.cpu())
+                    all_labels.append(y_batch.cpu())
+
+            all_preds, all_labels = torch.cat(all_preds, dim=0), torch.cat(all_labels, dim=0)
+            mae = torch.abs(all_preds.float() - all_labels.float()).mean().item()
+            val_score = 0.5 * (2 - mae)
+            
+            # log metrics
+            print(f"Avg Train Loss {avg_train_loss}")
+            print(f"Avg Val Score: {val_score}")
+
+            if val_score > best_score:
+                best_score = val_score
+                patience_counter = 0
+                # torch.save(self.classifier.state_dict(), os.path.join(self.output_dir, f"models/best_mlp_head_{torch.save(self.classifier.state_dict(), os.path.join(self.output_dir, f"models/best_mlp_head_{self.config.embed_model}.pt"))}.pt"))
+                print("Best score")
+            else:
+                patience_counter += 1
+                if patience_counter >= self.config.patience:
+                    print(f"Early stopping after epoch {epoch + 1}")
+                    break
+        
+        print(f"Best Validation Score: {best_score}")
+
+        print("Training ended.\nStarting Testing")
         train_predictions = self.preds_to_series(self.predict_tensor(train_embeddings), train_sentences.index)
         val_predictions = self.preds_to_series(self.predict_tensor(val_embeddings), val_sentences.index)
 
@@ -77,6 +122,8 @@ class MLPHeadModel(BasePipeline):
 
     def preds_to_series(self, preds, index):
         preds = pd.Series(preds, index=index)
+        if self.config.mode == "regression":
+            preds = preds.round().clip(-1, 1).astype(int)
         preds = apply_inverse_label_mapping(preds, self.label_mapping)
         return preds
 

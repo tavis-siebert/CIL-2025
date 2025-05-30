@@ -7,8 +7,9 @@ pipeline:
 
   embed_type: mean
   embed_pipeline: huggingface
-  embed_model: microsoft/deberta-v3-base #FacebookAI/roberta-base, xlnet/xlnet-base-cased, cardiffnlp/twitter-roberta-base-emotion
+  embed_model: FacebookAI/roberta-large
 
-  mode: classification
-  num_epochs: 20
+  mode: regression
+  num_epochs: 25
   batch_size: 64
+  patience: 8
