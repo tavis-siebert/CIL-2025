@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+"""This script trains a model using a specified pipeline and evaluates it on a validation set."""
+
 import sys
 from pathlib import Path
 
@@ -58,7 +61,12 @@ def main(args):
         ensure_reproducibility(seed=config.seed, deterministic=config.deterministic)
 
         # load pipeline
-        pipeline = load_pipeline(config.pipeline, device=device, output_dir=args.out, debug=args.debug)
+        pipeline = load_pipeline(
+            config.pipeline,
+            device=device,
+            output_dir=args.out,
+            debug=args.debug,
+        )
         logger.info(f"Loaded pipeline: {config.pipeline.name}")
 
         # load train dataset and create splits

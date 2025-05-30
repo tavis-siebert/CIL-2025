@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+"""This script generates embeddings for sentences using a specified pipeline and model."""
+
 import sys
 from pathlib import Path
 
@@ -22,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def main(args):
+    """Main function to generate embeddings using the specified pipeline and model."""
     # initialize cache
     CACHE.init(cache_dir=args.cache)
     embeddings_folder = get_embeddings_folder(args.pipeline, args.model)
@@ -44,8 +48,16 @@ def main(args):
         logger.info(f"Using device: {model.device}")
 
         # generate embeddings
-        train_embeddings = model.encode(train_dataset["sentence"], show_progress_bar=True, batch_size=args.batch_size)
-        test_embeddings = model.encode(test_dataset["sentence"], show_progress_bar=True, batch_size=args.batch_size)
+        train_embeddings = model.encode(
+            train_dataset["sentence"],
+            show_progress_bar=True,
+            batch_size=args.batch_size,
+        )
+        test_embeddings = model.encode(
+            test_dataset["sentence"],
+            show_progress_bar=True,
+            batch_size=args.batch_size,
+        )
 
         # save embeddings
         embeddings = {
@@ -116,7 +128,9 @@ def main(args):
             }
             predictions_all = np.concatenate(predictions_all, axis=0)
             predictions_all = pd.DataFrame(
-                predictions_all, index=sentences.index, columns=model.config.id2label.values()
+                predictions_all,
+                index=sentences.index,
+                columns=model.config.id2label.values(),
             )
 
             return embeddings_all, predictions_all
