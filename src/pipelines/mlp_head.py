@@ -1,3 +1,5 @@
+"""Module for MLP head model pipeline."""
+
 import logging
 
 import pandas as pd
@@ -14,9 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class MLPHeadModel(BasePipeline):
-    """
-    Implements a linear head over
-    """
+    """Implements a linear head model on top of embeddings."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -1,4 +1,7 @@
-"""Currently only supports MLPs"""
+"""Module for boosted MLP head pipeline.
+
+Currently only supports MLPs.
+"""
 
 import numpy as np
 import pandas as pd

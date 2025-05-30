@@ -1,3 +1,5 @@
+"""Module for classical ML pipeline that supports several sklearn models."""
+
 import logging
 
 import pandas as pd
@@ -100,7 +102,11 @@ def create_model(model_config, label_mapping):
 
 
 class ClassicalMLPipeline(BasePipeline):
-    """Classical machine learning pipeline for text classification."""
+    """Classical machine learning pipeline for several sklearn models.
+
+    This pipeline supports various vectorizers, models, and preprocessing steps.
+    It can be used for both regression and classification tasks.
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

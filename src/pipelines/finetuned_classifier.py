@@ -1,3 +1,5 @@
+"""Module for finetuned sentiment classifier pipeline."""
+
 import logging
 
 import numpy as np
