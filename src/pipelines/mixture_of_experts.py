@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from omegaconf import DictConfig, ListConfig
+from omegaconf import DictConfig
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
@@ -95,14 +95,8 @@ class MoEModel(BasePipeline):
     Pipeline wrapping a Dynamic Mixture-of-Experts model for sentiment analysis.
     """
 
-    def __init__(
-        self,
-        config: DictConfig | ListConfig,
-        device: str | torch.device | None = None,
-        output_dir: str = "output",
-        debug: bool = False,
-    ):
-        super().__init__(config, device, output_dir, debug)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         # Expert names and embeds
         self.expert_names = []
@@ -117,25 +111,17 @@ class MoEModel(BasePipeline):
             self.expert_embeddings[name] = load_embeddings(embed_pipeline, name, embed_file)
 
         # Label mappings
-        if config.mode == "regression":
+        if self.config.mode == "regression":
             self.label_mapping = {"negative": -1, "neutral": 0, "positive": 1}
             out_size = 1
-        elif config.mode == "classification":
+        elif self.config.mode == "classification":
             self.label_mapping = {"negative": 0, "neutral": 1, "positive": 2}
             out_size = 3
         else:
-            raise ValueError(f"Unknown label mapping: {config.mode}")
+            raise ValueError(f"Unknown label mapping: {self.config.mode}")
 
         # MoE model
         self.MoE = MoE(self.config.experts, out_size).to(self.device)
-
-        # 5. Training hyperparameters from config
-        self.batch_size = config.batch_size
-        self.num_epochs = config.num_epochs
-        self.lr = config.learning_rate
-        self.weight_decay = config.weight_decay
-        self.patience = config.patience
-        self.entropy_coeff = config.entropy_coeff
 
     def train(
         self,
@@ -171,11 +157,11 @@ class MoEModel(BasePipeline):
         train_dataset = TensorDataset(*list(train_embeddings.values()), train_labels)
         val_dataset = TensorDataset(*list(val_embeddings.values()), val_labels)
 
-        train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=self.batch_size)
+        train_loader = DataLoader(train_dataset, batch_size=self.config.batch_size, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=self.config.batch_size)
 
         # Optimizer, scheduler
-        optimizer = AdamW(self.MoE.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        optimizer = AdamW(self.MoE.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
         scheduler = ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=2)
 
         best_score = 0.0
@@ -183,7 +169,7 @@ class MoEModel(BasePipeline):
 
         # --- Training starts ----
         logger.info("Starting Training")
-        for epoch in range(self.num_epochs):
+        for epoch in range(self.config.num_epochs):
             # Train epoch
             self.MoE.train()
 
@@ -204,9 +190,9 @@ class MoEModel(BasePipeline):
                 weights_matrix = torch.stack([ew for ew in expert_weights], dim=0)
                 covariance = torch.cov(weights_matrix)
                 diversity_loss = torch.norm(covariance, p="fro")
-                loss += self.diversity_coeff * diversity_loss
+                loss += self.config.diversity_coeff * diversity_loss
 
-                entropy_reg = self.entropy_coeff * (expert_weights * torch.log(expert_weights)).sum(dim=1).mean()
+                entropy_reg = self.config.entropy_coeff * (expert_weights * torch.log(expert_weights)).sum(dim=1).mean()
                 loss += entropy_reg
 
                 loss.backward()
@@ -270,7 +256,7 @@ class MoEModel(BasePipeline):
                 logger.info("Saved best model")
             else:
                 patience_counter += 1
-                if patience_counter >= self.patience:
+                if patience_counter >= self.config.patience:
                     logger.info(f"Early stopping after epoch {epoch + 1}")
                     break
 
