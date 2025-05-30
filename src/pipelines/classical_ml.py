@@ -29,6 +29,15 @@ logger = logging.getLogger(__name__)
 
 
 def create_model(model_config, label_mapping):
+    """Create a sklearn model based on the provided configuration.
+
+    Args:
+        model_config (dict): Configuration dictionary for the model.
+        label_mapping (str): Type of label mapping, either "regression" or "classification".
+
+    Returns:
+        model: An instance of the specified machine learning model.
+    """
     model_type = model_config.pop("type")
 
     if label_mapping == "regression":
@@ -54,7 +63,7 @@ def create_model(model_config, label_mapping):
             case "OneVsRestClassifier":
                 return OneVsRestClassifier(
                     create_model(model_config.pop("estimator"), label_mapping),
-                    **model_config
+                    **model_config,
                 )
             case "StackingClassifier":
                 if type(model_config["estimators"]) is list:
@@ -189,9 +198,7 @@ class ClassicalMLPipeline(BasePipeline):
             train_embeddings, train_labels_for_fit = oversampler.fit_resample(
                 train_embeddings, train_labels_for_fit
             )
-            logger.info(
-                f"Oversampled train set to {len(train_labels_for_fit)} samples"
-            )
+            logger.info(f"Oversampled train set to {len(train_labels_for_fit)} samples")
 
         # train
         self.model.fit(train_embeddings, train_labels_for_fit)

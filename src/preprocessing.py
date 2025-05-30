@@ -1,3 +1,10 @@
+"""Preprocessing utilities for text data.
+
+This module provides functions to preprocess text data using various regex rules,
+stemming, lemmatization, and stopword removal. It also includes functionality to apply
+the rules to a pandas Series of sentences and to print statistics.
+"""
+
 import logging
 import re
 
@@ -7,7 +14,7 @@ from nltk.stem import PorterStemmer, WordNetLemmatizer
 
 logger = logging.getLogger(__name__)
 
-# Downlod WordNet if needed
+# downlod WordNet if needed
 try:
     nltk.data.find("corpora/wordnet")
     logger.info("WordNet is already downloaded.")
@@ -15,6 +22,7 @@ except LookupError:
     logger.info("WordNet not found. Downloading...")
     nltk.download("wordnet")
 
+# various regex rules for text preprocessing
 REGEX_RULES = {
     "clean_whitespaces": (re.compile(r"([\s&&[^ ]]|\s{2,})"), " "),
 
@@ -38,6 +46,8 @@ REGEX_RULES = {
     "remove_repeated_chars": (re.compile(r"(.)\1{4,}"), "\1\1\1"),
     "remove_special_chars": (re.compile(r"[^a-zA-Z0-9\!\?= ]"), ""),
 
+    # the rules below are not used and might conflict with other rules
+
     # "@ to at": (re.compile(r" \@ "), " at "),
     # "2 to to": (re.compile(r" 2 "), " to "),
 
@@ -50,6 +60,7 @@ REGEX_RULES = {
     # "not": (re.compile(r"not (\w+)"), "not_\1"),
 }  # fmt: off
 
+# list of all available preprocessing rules
 ALL_RULES = [
     "clean_whitespaces",
 
@@ -113,14 +124,25 @@ def preprocess_text(
     text: str,
     active_rules: set[str],
     stats: dict[str, int] = None,
-):
-    # apply regex rules
+) -> str:
+    """Preprocess a given text using the specified active rules.
+
+    Args:
+        text (str): The text to preprocess.
+        active_rules (set[str]): A set of preprocessing rule names to apply.
+        stats (dict[str, int], optional): A dictionary to store statistics about applied rules.
+
+    Returns:
+        text_preprocessed (str): The preprocessed text.
+    """
     new_stats = set()
+
+    # apply regex rules
     for name, rule in REGEX_RULES.items():
         # get rule prefixes
         rule_prefixes = name.split("/")
         for i in range(1, len(rule_prefixes)):
-            rule_prefixes[i] = f"{rule_prefixes[i-1]}/{rule_prefixes[i]}"
+            rule_prefixes[i] = f"{rule_prefixes[i - 1]}/{rule_prefixes[i]}"
 
         pattern, replacement = rule
 
@@ -137,6 +159,7 @@ def preprocess_text(
         # apply regex rule
         text = pattern.sub(replacement, text)
 
+    # update stats if requested
     if stats is not None:
         for prefix in new_stats:
             stats[prefix] = stats.get(prefix, 0) + 1
@@ -150,13 +173,13 @@ def preprocess_text(
     # word stemming or lemmatization
     if "stem" in active_rules and "lemmatize" in active_rules:
         raise ValueError("Cannot use both stemming and lemmatization at the same time.")
-    elif "stem" in active_rules: # stem
+    elif "stem" in active_rules:  # stem
         stemmer = PorterStemmer()
         text_stemmed = " ".join(stemmer.stem(word) for word in text.split())
         if stats is not None and text != text_stemmed:
             stats["stem"] = stats.get("stem", 0) + 1
         text = text_stemmed
-    elif "lemmatize" in active_rules: # lemmatize
+    elif "lemmatize" in active_rules:  # lemmatize
         lemmatizer = WordNetLemmatizer()
         text_lemmatized = " ".join(lemmatizer.lemmatize(word) for word in text.split())
         if stats is not None and text != text_lemmatized:
@@ -165,7 +188,9 @@ def preprocess_text(
 
     # remove stopwords
     if "remove_stopwords" in active_rules:
-        text_without_stopwords = " ".join(word for word in text.split() if word.lower() not in STOPWORDS)
+        text_without_stopwords = " ".join(
+            word for word in text.split() if word.lower() not in STOPWORDS
+        )
         if stats is not None and text != text_without_stopwords:
             stats["remove_stopwords"] = stats.get("remove_stopwords", 0) + 1
         text = text_without_stopwords
@@ -177,10 +202,23 @@ def apply_preprocessing(
     sentences: pd.Series,
     active_rules: set[str],
     print_stats: bool = False,
-):
+) -> pd.Series:
+    """Apply preprocessing rules to a pandas Series of sentences.
+
+    Args:
+        sentences (pd.Series): A pandas Series containing sentences to preprocess.
+        active_rules (set[str]): A set of preprocessing rule names to apply.
+        print_stats (bool): Whether to print statistics about applied rules.
+
+    Returns:
+        preprocessed_sentences (pd.Series):
+            A pandas Series containing the preprocessed sentences.
+    """
     # check if active_rules only contains valid rules
     if not active_rules.issubset(ALL_RULES):
-        raise ValueError(f"Invalid preprocessing rules: {active_rules - set(ALL_RULES)}")
+        raise ValueError(
+            f"Invalid preprocessing rules: {active_rules - set(ALL_RULES)}"
+        )
 
     # copy the sentences to avoid modifying the original
     sentences = sentences.copy()
@@ -188,12 +226,17 @@ def apply_preprocessing(
     stats = {}
 
     # apply preprocessing rules on each sentence
-    sentences = sentences.apply(lambda x: preprocess_text(x, active_rules=active_rules, stats=stats))
+    sentences = sentences.apply(
+        lambda x: preprocess_text(x, active_rules=active_rules, stats=stats)
+    )
 
+    # print statistics if requested
     if print_stats:
         for name in sorted(stats.keys()):
-            if stat:=stats[name]:
-                logger.info(f"Preprocessing rule '{name}' applied {stat} ({100*stat/len(sentences):.02f}\%).")
+            if stat := stats[name]:
+                logger.info(
+                    f"Preprocessing rule '{name}' applied {stat} ({100 * stat / len(sentences):.02f}\%)."
+                )
 
     logger.info(f"Applied preprocessing rules: {active_rules}")
     return sentences

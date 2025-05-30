@@ -1,6 +1,4 @@
-"""
-Currently only supports MLPs
-"""
+"""Currently only supports MLPs"""
 
 import numpy as np
 import pandas as pd

@@ -1,3 +1,10 @@
+"""Cache utilities for storing and retrieving data efficiently.
+
+This module provides a Cache class that allows caching of function outputs to disk
+and retrieving them later. It supports various file formats such as NumPy arrays,
+PyTorch tensors, Pandas DataFrames, and pickled objects.
+"""
+
 import logging
 import pickle
 from pathlib import Path
@@ -13,6 +20,14 @@ logger = logging.getLogger(__name__)
 
 
 class Cache:
+    """A class for caching function outputs to disk.
+
+    This class allows you to cache the output of a function to a file and retrieve it later.
+    It supports various file formats such as NumPy arrays, PyTorch tensors, Pandas DataFrames,
+    and pickled objects. The cache directory can be specified, and the cache can be refreshed
+    by re-evaluating the function if the cached file does not exist or if the `refresh` flag is set.
+    The cached files are stored in a directory structure based on the provided path.
+    """
     def __init__(self, **kwargs):
         self.init(**kwargs)
 
@@ -75,7 +90,12 @@ class Cache:
                 output.to_csv(path, **save_kwargs)
             elif path.suffix == ".pkl":
                 with open(path, "wb") as file:
-                    pickle.dump(output, file, protocol=pickle.HIGHEST_PROTOCOL, **save_kwargs)
+                    pickle.dump(
+                        output,
+                        file,
+                        protocol=pickle.HIGHEST_PROTOCOL,
+                        **save_kwargs,
+                    )
             else:
                 raise ValueError(f"Unknown file format: {path.suffix}")
             if verbose:
@@ -98,6 +118,7 @@ class Cache:
         return output  # type: ignore
 
     def get_path(self, path: str | Path) -> Path:
+        """Get the full path to the cached file."""
         if self.cache_dir is None:
             raise ValueError("Cache directory is not set. Please call init() first.")
         return self.cache_dir / path
@@ -111,13 +132,24 @@ def get_embeddings_folder(pipeline_name: str, model_name: str) -> Path:
     return Path("embeddings") / pipeline_name / model_name.replace("/", "__")
 
 
-def save_embeddings(embeddings: Any, pipeline_name: str, model_name: str, file_name: str = "embeddings.npz", **kwargs):
+def save_embeddings(
+    embeddings: Any,
+    pipeline_name: str,
+    model_name: str,
+    file_name: str = "embeddings.npz",
+    **kwargs,
+):
     """Save embeddings from the cache."""
     path = get_embeddings_folder(pipeline_name, model_name) / file_name
     CACHE(lambda: embeddings, path, refresh=True, **kwargs)
 
 
-def load_embeddings(pipeline_name: str, model_name: str, file_name: str = "embeddings.npz", **kwargs) -> Any:
+def load_embeddings(
+    pipeline_name: str,
+    model_name: str,
+    file_name: str = "embeddings.npz",
+    **kwargs,
+) -> Any:
     """Load embeddings from the cache."""
     path = get_embeddings_folder(pipeline_name, model_name) / file_name
 
