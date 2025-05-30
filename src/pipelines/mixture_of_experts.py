@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import List
 
@@ -15,6 +16,8 @@ from cache import load_embeddings
 from utils import apply_inverse_label_mapping, apply_label_mapping
 
 from .base import BasePipeline
+
+logger = logging.getLogger(__name__)
 
 
 class MoE(nn.Module):
@@ -179,7 +182,7 @@ class MoEModel(BasePipeline):
         patience_counter = 0
 
         # --- Training starts ----
-        print("Starting Training")
+        logger.info("Starting Training")
         for epoch in range(self.num_epochs):
             # Train epoch
             self.MoE.train()
@@ -246,39 +249,40 @@ class MoEModel(BasePipeline):
             avg_expert_weights_val = expert_weights_sum_val / samples_count_val
 
             # Log metrics
-            print(f"Avg Train Loss {avg_train_loss}")
-            print(f"Avg Val Score: {val_score}")
+            logger.info(f"Avg Train Loss {avg_train_loss}")
+            logger.info(f"Avg Val Score: {val_score}")
 
-            train_weights_str = ", ".join(
+            train_weights_str = "\n".join(
                 [f"{name} {avg_expert_weights_train[i]:.3f}" for i, name in enumerate(self.expert_names)]
             )
-            print(f"Train Expert Weights: {train_weights_str}")
-            val_weights_str = ", ".join(
+            logger.info(f"Train Expert Weights:\n{train_weights_str}")
+            val_weights_str = "\n".join(
                 [f"{name} {avg_expert_weights_val[i]:.3f}" for i, name in enumerate(self.expert_names)]
             )
-            print(f"Val Expert Weights: {val_weights_str}")
+            logger.info(f"Val Expert Weights:\n{val_weights_str}")
 
             # Early stopping & checkpointing
             if val_score > best_score:
                 best_score = val_score
                 patience_counter = 0
+                os.makedirs(os.path.join(self.output_dir, "models"), exist_ok=True)
                 torch.save(self.MoE.state_dict(), os.path.join(self.output_dir, "models/best_moe.pt"))
-                print("Saved best model")
+                logger.info("Saved best model")
             else:
                 patience_counter += 1
                 if patience_counter >= self.patience:
-                    print(f"Early stopping after epoch {epoch + 1}")
+                    logger.info(f"Early stopping after epoch {epoch + 1}")
                     break
 
         # --- Training ended ----
-        print("Training ended.\nStarting Testing")
+        logger.info("Training ended.\nStarting Testing")
 
         # Load best model
-        print("Loading best model for inference")
+        logger.info("Loading best model for inference")
         try:
             self.MoE.load_state_dict(torch.load(os.path.join(self.output_dir, "models/best_moe.pt")))
         except FileNotFoundError:
-            print(
+            logger.info(
                 "No best model checkpoint found. Using current model state (likely from last epoch of training if training just finished)."
             )
 
@@ -300,7 +304,7 @@ class MoEModel(BasePipeline):
         self.MoE.eval()
         num_samples = len(list(embeds_dict.values())[0])
         if inference_batch_size is None or inference_batch_size >= num_samples:
-            print("WARNING: Large batch sizes might result in out-of-memory errors if there are many experts")
+            logger.warning("Large batch sizes might result in out-of-memory errors if there are many experts")
             return compute_preds(embeds_dict)
 
         preds = []

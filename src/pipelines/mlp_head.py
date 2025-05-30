@@ -1,4 +1,5 @@
-import os
+import logging
+
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -8,6 +9,8 @@ from cache import load_embeddings
 from utils import apply_inverse_label_mapping, apply_label_mapping
 
 from .base import BasePipeline
+
+logger = logging.getLogger(__name__)
 
 
 class MLPHeadModel(BasePipeline):
@@ -86,7 +89,7 @@ class MLPHeadModel(BasePipeline):
             with torch.no_grad():
                 for x_batch, y_batch in val_loader:
                     pred = self.classifier(x_batch)
-                    if self.config.mode == 'classification':
+                    if self.config.mode == "classification":
                         pred = pred.argmax(dim=1)
                     else:
                         pred = pred.round().clip(-1, 1)
@@ -96,25 +99,25 @@ class MLPHeadModel(BasePipeline):
             all_preds, all_labels = torch.cat(all_preds, dim=0), torch.cat(all_labels, dim=0)
             mae = torch.abs(all_preds.float() - all_labels.float()).mean().item()
             val_score = 0.5 * (2 - mae)
-            
+
             # log metrics
-            print(f"Avg Train Loss {avg_train_loss}")
-            print(f"Avg Val Score: {val_score}")
+            logger.info(f"Avg Train Loss {avg_train_loss}")
+            logger.info(f"Avg Val Score: {val_score}")
 
             if val_score > best_score:
                 best_score = val_score
                 patience_counter = 0
                 # torch.save(self.classifier.state_dict(), os.path.join(self.output_dir, f"models/best_mlp_head_{torch.save(self.classifier.state_dict(), os.path.join(self.output_dir, f"models/best_mlp_head_{self.config.embed_model}.pt"))}.pt"))
-                print("Best score")
+                logger.info("Best score")
             else:
                 patience_counter += 1
                 if patience_counter >= self.config.patience:
-                    print(f"Early stopping after epoch {epoch + 1}")
+                    logger.info(f"Early stopping after epoch {epoch + 1}")
                     break
-        
-        print(f"Best Validation Score: {best_score}")
 
-        print("Training ended.\nStarting Testing")
+        logger.info(f"Best Validation Score: {best_score}")
+
+        logger.info("Training ended.\nStarting Testing")
         train_predictions = self.preds_to_series(self.predict_tensor(train_embeddings), train_sentences.index)
         val_predictions = self.preds_to_series(self.predict_tensor(val_embeddings), val_sentences.index)
 
