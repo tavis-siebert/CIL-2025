@@ -11,6 +11,7 @@ from sklearn.ensemble import (
 )
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import SVC
 from xgboost import XGBClassifier, XGBRegressor
 
@@ -50,6 +51,11 @@ def create_model(model_config, label_mapping):
                 return XGBClassifier(**model_config)
             case "SVC":
                 return SVC(**model_config)
+            case "OneVsRestClassifier":
+                return OneVsRestClassifier(
+                    create_model(model_config.pop("estimator"), label_mapping),
+                    **model_config
+                )
             case "StackingClassifier":
                 if type(model_config["estimators"]) is list:
                     estimators = [
