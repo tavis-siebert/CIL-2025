@@ -199,8 +199,8 @@ class MoEModel(BasePipeline):
                 #TODO add diversity loss?
                 weights_matrix = torch.stack([ew for ew in expert_weights], dim=0)
                 covariance = torch.cov(weights_matrix)
-                diversity_loss = torch.norm(covariance, p="fro")  # Minimize covariance
-                loss += 0.01 * diversity_loss  # Adjust coefficient
+                diversity_loss = torch.norm(covariance, p="fro")
+                loss += 0.01 * diversity_loss
                 """
                 loss = criterion(logits, labels)
                 entropy_reg = self.entropy_coeff * (expert_weights * torch.log(expert_weights)).sum(dim=1).mean()
@@ -231,6 +231,8 @@ class MoEModel(BasePipeline):
                     preds, expert_weights = self.MoE(expert_inputs)
                     if self.config.mode == "classification":
                         preds = preds.argmax(dim=1)
+                    else:
+                        preds = preds.round().clip(-1, 1)
                     samples_count_val += labels.size(0)
                     all_preds.append(preds.cpu())
                     all_labels.append(labels.cpu())
@@ -314,6 +316,8 @@ class MoEModel(BasePipeline):
 
     def preds_to_series(self, preds, index):
         preds = pd.Series(preds, index=index)
+        if self.config.mode == "regression":
+            preds = preds.round().clip(-1, 1).astype(int)
         preds = apply_inverse_label_mapping(preds, self.label_mapping)
         return preds
 

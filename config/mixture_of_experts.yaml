@@ -15,22 +15,26 @@ pipeline:
   #  - processor_output_dim = what is the size of the embedding we want after initial projection to shared feature space?
 
   experts: 
-    - embed_model: microsoft/deberta-v3-base
+    - embed_model: cardiffnlp/twitter-roberta-base-sentiment-latest
       embed_pipeline: huggingface
       embed_type: mean
       processor_output_dim: 512
-    - embed_model: cardiffnlp/twitter-roberta-base-emotion
+    - embed_model: siebert/sentiment-roberta-large-english
       embed_pipeline: huggingface
       embed_type: mean
       processor_output_dim: 512
-    - embed_model: sentence-transformers/all-mpnet-base-v2
-      embed_pipeline: sentencetransformer
-      embed_type: none
+    - embed_model: FacebookAI/roberta-large
+      embed_pipeline: huggingface
+      embed_type: mean
+      processor_output_dim: 512
+    - embed_model: tabularisai/multilingual-sentiment-analysis
+      embed_pipeline: huggingface
+      embed_type: mean
       processor_output_dim: 512
   
   # training
   batch_size: 64
-  num_epochs: 30
+  num_epochs: 20
   learning_rate: 0.001
   weight_decay: 0.01
   patience: 5
