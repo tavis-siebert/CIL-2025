@@ -1,6 +1,6 @@
 # CIL 2025 - Sentiment Analysis
 
-This repository contains our code for the CIL 2025 course project on sentiment analysis. The goal of this project is to implement and evaluate various machine learning pipelines for sentiment classification on a given dataset.
+This repository contains our code for the Computational Intelligence Lab (CIL) 2025 course project at the department of ETH Zurich on sentiment analysis. The goal of this project is to implement and evaluate various machine learning pipelines for sentiment classification on a given dataset.
 
 ## Setup
 We use `Python 3.12.3` with the following dependencies:
@@ -49,10 +49,8 @@ Finally, post-tune your finetuned model with the following command:
 python scripts/run_pipeline.py --config config/finetuned_classifier.yaml
 ```
 
----
-
-## Setup (dev)
-If you plan to develop in this repository, run
+## Contributing
+If you plan to contribute to this repository, run
 ```
 pip install -r requirements_dev.txt
 pre-commit install
@@ -62,15 +60,15 @@ to install the [pre-commit](https://pre-commit.com/) and [nbstripout](https://gi
 
 To contribute to this repository, please work on a branch named `<name>/<description>` and create pull requests.
 
-## Add a pipeline
+### Add a pipeline
 To add new pipelines, create the following two files
 * `config/<config_file>.yaml`: The configuration file with the module name of the pipeline and all hyperparameters.
 * `src/pipelines/<module_file>.py`: The module file with the pipeline definition.
 
-## Use the cache
+### Use the cache
 To save intermediate outputs of expensive function calls to the cache, you can use the `CACHE` object provided by the `cache.py` module. To specifically save and load embeddings from the cache, you can use the `save_embeddings` and `load_embeddings` wrappers around the `CACHE` object.
 
-### Cache embeddings
+#### Cache embeddings
 To save custom embeddings to the cache, use
 ```python
 from cache import CACHE, save_embeddings
@@ -89,7 +87,7 @@ CACHE.init(cache_dir=<cache_dir>)
 embeddings = load_embeddings(<pipeline_name>, <model_name>)
 ```
 
-### Cache custom outputs
+#### Cache custom outputs
 To cache the output of a function call, use
 ```python
 from cache import CACHE
@@ -106,3 +104,13 @@ Depending on the provided file ending, `CACHE` expects the following return type
 - `.pt`: expects `torch.Tensor`
 - `.csv`: expects `pd.DataFrame`
 - `.pkl`: expects any object
+
+
+## Authors
+
+The following individuals contributed equally to this project:
+
+* **Redhardt, Florian** - [GitHub Profile](https://github.com/Florian-toll)
+* **Siebert, Tavis** - [GitHub Profile](https://github.com/tavis-siebert)
+* **Stante, Samuel** - [GitHub Profile](https://github.com/Timisorean)
+* **Yang, Daniel** - [GitHub Profile](https://github.com/danielyxyang)
