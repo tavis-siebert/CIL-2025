@@ -34,9 +34,19 @@ For some pipelines, we use pretrained embeddings extracted from pretrained model
     ```
 
 ## Final submission
-To reproduce our final submission with a train score of TODO and validation score of TODO, run
+To reproduce our final submission with a train score of `0.96351` and validation score of `0.90646`, first finetune `FacebookAI/roberta-large` with the following command:
 ```bash
-python scripts/run_pipeline.py --config config/TODO.yaml
+python scripts/run_pipeline.py --config config/finetuned_classifier.yaml
+```
+
+Then update `config/finetuned_classifier.yaml` with the following parameters:
+- `pipeline.model.pretrained_model_name_or_path`: change it to your last checkpoint path
+- `pipeline.preprocessing.difficulty_filter`: uncomment
+- `pipeline.trainer.learning_rate`: change it to `1e-6`
+
+Finally, post-tune your finetuned model with the following command:
+```bash
+python scripts/run_pipeline.py --config config/finetuned_classifier.yaml
 ```
 
 ---
