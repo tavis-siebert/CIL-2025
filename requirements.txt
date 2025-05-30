@@ -7,7 +7,9 @@ wandb
 scikit-learn
 imblearn
 transformers
+datasets
 accelerate
+peft
 huggingface_hub[hf_transfer,hf_xet] # for faster downloads
 sentence-transformers
 xgboost

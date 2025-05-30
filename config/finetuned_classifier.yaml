@@ -1,0 +1,104 @@
+seed: 0
+deterministic: False
+
+val_split_size: 0.1
+
+pipeline:
+  name: finetuned_classifier.FinetunedClassifier
+
+  label_mapping:
+    negative: 0
+    neutral: 1
+    positive: 2
+
+  model:
+    # pretrained_model_name_or_path: cardiffnlp/twitter-roberta-base-sentiment-latest
+    # pretrained_model_name_or_path: tabularisai/multilingual-sentiment-analysis
+    # pretrained_model_name_or_path: siebert/sentiment-roberta-large-english
+    pretrained_model_name_or_path: FacebookAI/roberta-large
+
+    num_labels: 3
+
+  # freeze:
+  #   - roberta.embeddings
+  #   - roberta.encoder.layer.0
+  #   - roberta.encoder.layer.1
+  #   - roberta.encoder.layer.2
+  #   - roberta.encoder.layer.3
+  #   - roberta.encoder.layer.4
+  #   - roberta.encoder.layer.5
+  #   - roberta.encoder.layer.6
+  #   - roberta.encoder.layer.7
+  #   - roberta.encoder.layer.8
+  #   - roberta.encoder.layer.9
+  #   - roberta.encoder.layer.10
+  #   - roberta.encoder.layer.11
+
+  # peft:
+  #   r: 32
+  #   lora_alpha: 64
+  #   lora_dropout: 0.05
+  #   bias: none
+  #   target_modules: # RobertaModel
+  #     - query # default
+  #     - value # default
+  #     - key
+  #     - attention.output.dense
+  #     - intermediate.dense
+  #     - output.dense
+  #     # - classifier.dense
+  #     # - classifier.out_proj
+  #     # - word_embeddings
+  #   task_type: SEQ_CLS
+
+  preprocessing:
+    batch_size: 32
+
+    # sanitizer:
+    #   - clean_whitespaces
+    #   - internet
+    #   - punctuation
+    #   - remove_repeated_chars
+
+    # difficulty_filter:
+    #   path: data/sentiment_model_voting.csv
+    #   score_name: score
+    #   score_threshold: 0.5
+    #   p: 0.25
+
+    tokenizer:
+      padding: true
+      truncation: true
+      max_length: 512
+
+  trainer:
+    seed: ${seed}
+
+    # objective parameters
+    # class_weights: auto # original: [1.553279, 0.692446, 1.096438]
+    class_weights: [1.553279, 1.038669, 1.096438] # original * [1, 1.5, 1]
+    weight_decay: 0.01
+
+    # training parameters
+    num_train_epochs: 2
+    per_device_train_batch_size: 4
+    gradient_accumulation_steps: 4
+
+    learning_rate: 1e-5
+    lr_scheduler_type: constant
+
+    # eval parameters
+    per_device_eval_batch_size: 64
+    eval_strategy: steps
+    eval_steps: 0.02
+
+    # logging parameters
+    logging_strategy: steps
+    logging_steps: 0.001
+
+    # checkpointing parameters
+    save_strategy: steps
+    save_steps: 0.02
+    save_total_limit: 2
+    load_best_model_at_end: true
+    metric_for_best_model: eval_score

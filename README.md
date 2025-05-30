@@ -14,12 +14,13 @@ To run a pipeline, use the command
 python scripts/run_pipeline.py --config config/<config_file>.yaml
 ```
 
-We have implemented the following pipelines
+We have implemented the following pipelines:
 - `classical_ml_bow_*.yaml`: bag-of-words embeddings + classical machine learning models (e.g., logistic regression, random forest, SVM, XGBoost)
 - `mlp_head.yaml`: TODO
 - `boosted_mlp_head.yaml`: TODO
-- `pretrained_classifier.yaml`: pretrained language models (inference-only)
 - `mixture_of_experts.yaml`: TODO
+- `pretrained_classifier.yaml`: pretrained language models (inference-only)
+- `finetuned_classifier.yaml`: finetuned language models
 
 To reproduce our final submission with a train score of TODO and validation score of TODO, run
 ```bash
